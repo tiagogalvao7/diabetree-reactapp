@@ -1,0 +1,6 @@
+Futuramente o plano é colocar os dados do paciente na blockchain
+O sonho era conseguir ligar a aplicação à app do FreeStyle Libre
+Ter uma árvore default
+Ter uma árvore que fica mais bonita ou não, consoante a média dos valores
+Ter uma shop com várias árvores: Comprar árvores com moedas que se vão ganhando consoante os valores no tempo alvo
+Quandi adicionamos uma leitura de glicemia, ter um input para adicionar uma nota
