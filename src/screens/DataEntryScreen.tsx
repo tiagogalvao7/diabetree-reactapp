@@ -1,29 +1,41 @@
 // src/screens/DataEntryScreen.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, Button, Alert, ScrollView } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, Alert, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons'; // For icons
+import * as Haptics from 'expo-haptics'; // For haptic feedback
 
-// Define a type for a single glucose reading
 interface GlucoseReading {
-  id: string; // Unique ID for each reading
+  id: string;
   value: number;
-  timestamp: string; // ISO string for easy sorting and display
+  timestamp: string;
 }
 
-const DataEntryScreen = () => {
-  const [glucoseValue, setGlucoseValue] = useState(''); // State for the input field
-  const [recentReadings, setRecentReadings] = useState<GlucoseReading[]>([]); // State to display recent readings
+const USER_COINS_KEY = '@user_coins';
+const LAST_COIN_EARN_TIMESTAMP_KEY = '@last_coin_earn_timestamp';
 
-  // Load existing readings when the component mounts
-  useEffect(() => {
-    loadReadings();
-  }, []);
+// Target definitions for glucose levels
+const TARGET_MIN = 70;
+const TARGET_MAX = 180;
+
+const DataEntryScreen = () => {
+  const [glucoseValue, setGlucoseValue] = useState('');
+  const [recentReadings, setRecentReadings] = useState<GlucoseReading[]>([]);
+  const navigation = useNavigation();
+
+  // Use useFocusEffect to reload readings whenever the screen focuses
+  useFocusEffect(
+    useCallback(() => {
+      loadReadings();
+    }, [])
+  );
 
   const loadReadings = async () => {
     try {
       const jsonValue = await AsyncStorage.getItem('@glucose_readings');
       const readings: GlucoseReading[] = jsonValue != null ? JSON.parse(jsonValue) : [];
-      // Sort readings by timestamp to show the most recent first
+      // Sort from most recent to oldest
       readings.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentReadings(readings);
     } catch (e) {
@@ -33,53 +45,101 @@ const DataEntryScreen = () => {
   };
 
   const saveReading = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic feedback on save
+
     const value = parseFloat(glucoseValue);
     if (isNaN(value) || value <= 0) {
       Alert.alert("Invalid Input", "Please enter a valid positive number for glucose.");
       return;
     }
+    // Reasonable range validation
+    if (value < 10 || value > 600) {
+      Alert.alert("Unusual Value", "The entered value seems unusual. Are you sure it's correct?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Confirm", onPress: () => confirmSaveReading(value) }
+      ]);
+      return;
+    }
 
+    confirmSaveReading(value);
+  };
+
+  const confirmSaveReading = async (value: number) => {
     const newReading: GlucoseReading = {
-      id: Date.now().toString(), // Simple unique ID
+      id: Date.now().toString(),
       value: value,
-      timestamp: new Date().toISOString(), // Current timestamp
+      timestamp: new Date().toISOString(),
     };
 
     try {
-      // Get existing readings, add the new one, and save back
       const jsonValue = await AsyncStorage.getItem('@glucose_readings');
       const existingReadings: GlucoseReading[] = jsonValue != null ? JSON.parse(jsonValue) : [];
       const updatedReadings = [...existingReadings, newReading];
 
       await AsyncStorage.setItem('@glucose_readings', JSON.stringify(updatedReadings));
-      setGlucoseValue(''); // Clear input field
-      Alert.alert("Success", "Glucose reading saved!");
-      loadReadings(); // Reload readings to update the list
+      setGlucoseValue(''); // Clear the input
+
+      let alertMessage = "Reading recorded!";
+      
+      // --- Logic for Earning Coins with Time Rule ---
+      if (newReading.value >= TARGET_MIN && newReading.value <= TARGET_MAX) {
+        const storedLastCoinTimestamp = await AsyncStorage.getItem(LAST_COIN_EARN_TIMESTAMP_KEY);
+        const lastCoinTimestamp = storedLastCoinTimestamp ? parseInt(storedLastCoinTimestamp, 10) : 0;
+        const currentTime = new Date().getTime();
+        const TEN_MINUTES_IN_MS = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+        if (currentTime - lastCoinTimestamp >= TEN_MINUTES_IN_MS) {
+          const storedCoins = await AsyncStorage.getItem(USER_COINS_KEY);
+          let currentCoins = storedCoins != null ? parseInt(storedCoins, 10) : 0;
+          currentCoins += 1; // Add 1 coin
+          await AsyncStorage.setItem(USER_COINS_KEY, currentCoins.toString());
+          await AsyncStorage.setItem(LAST_COIN_EARN_TIMESTAMP_KEY, currentTime.toString()); // Update timestamp
+          alertMessage = 'Reading recorded! You win 1 coin for an on-target reading! 💰';
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); // Success feedback
+        } else {
+          const timeRemainingSeconds = Math.ceil((TEN_MINUTES_IN_MS - (currentTime - lastCoinTimestamp)) / 1000);
+          const minutesRemaining = Math.ceil(timeRemainingSeconds / 60);
+          alertMessage = `Reading recorded! To earn coins, wait ${minutesRemaining} more minutes between on-target readings.`;
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // Warning feedback
+        }
+      } else {
+        alertMessage = 'Reading recorded! Keep monitoring your levels.';
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); // Warning feedback
+      }
+
+      Alert.alert("Success", alertMessage, [
+        { text: "OK", onPress: () => {
+          loadReadings(); // Reload readings
+          navigation.goBack(); // Go back to the previous screen (HomeScreen)
+        }}
+      ]);
+
     } catch (e) {
-      console.error("Failed to save glucose reading to AsyncStorage:", e);
-      Alert.alert("Error", "Could not save reading.");
+      console.error("Failed to save reading or add coins:", e);
+      Alert.alert("Error", "Could not record the reading.");
     }
   };
 
-  const clearAllReadings = async () => {
+  const deleteReading = async (idToDelete: string) => {
     Alert.alert(
-      "Confirm Clear",
-      "Are you sure you want to delete ALL glucose readings? This action cannot be undone.",
+      "Confirm Deletion",
+      "Are you sure you want to delete this reading?",
       [
+        { text: "Cancel", style: "cancel" },
         {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete All",
+          text: "Delete",
           onPress: async () => {
             try {
-              await AsyncStorage.removeItem('@glucose_readings');
-              setRecentReadings([]);
-              Alert.alert("Cleared", "All readings have been deleted.");
+              const jsonValue = await AsyncStorage.getItem('@glucose_readings');
+              const existingReadings: GlucoseReading[] = jsonValue != null ? JSON.parse(jsonValue) : [];
+              const updatedReadings = existingReadings.filter(reading => reading.id !== idToDelete);
+              await AsyncStorage.setItem('@glucose_readings', JSON.stringify(updatedReadings));
+              loadReadings(); // Reload the list after deletion
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert("Success", "Reading deleted.");
             } catch (e) {
-              console.error("Failed to clear all readings:", e);
-              Alert.alert("Error", "Could not clear all readings.");
+              console.error("Failed to delete reading:", e);
+              Alert.alert("Error", "Could not delete the reading.");
             }
           },
           style: "destructive"
@@ -88,10 +148,51 @@ const DataEntryScreen = () => {
     );
   };
 
+  const clearAllReadings = async () => {
+    Alert.alert(
+      "Confirm Total Clear",
+      "Are you sure you want to erase ALL glucose readings? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete All Data",
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem('@glucose_readings');
+              await AsyncStorage.setItem(USER_COINS_KEY, '0'); // Reset coins
+              await AsyncStorage.removeItem(LAST_COIN_EARN_TIMESTAMP_KEY); // Reset last coin timestamp
+              setGlucoseValue('');
+              setRecentReadings([]);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Alert.alert("Clear Complete", "All readings and coins have been erased.");
+            } catch (e) {
+              console.error("Failed to delete all readings:", e);
+              Alert.alert("Error", "Could not delete all readings.");
+            }
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
+  const getReadingStyle = (value: number) => {
+    if (value < TARGET_MIN) {
+      return styles.readingLow;
+    } else if (value > TARGET_MAX) {
+      return styles.readingHigh;
+    } else {
+      return styles.readingTarget;
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
       <View style={styles.container}>
-        <Text style={styles.title}>Record Your Glucose</Text>
+        <Text style={styles.title}>Record Glucose</Text>
 
         <TextInput
           style={styles.input}
@@ -99,34 +200,41 @@ const DataEntryScreen = () => {
           keyboardType="numeric"
           value={glucoseValue}
           onChangeText={setGlucoseValue}
+          returnKeyType="done" // Adds "Done" button to the keyboard
+          onSubmitEditing={saveReading} // Allows saving by pressing "Done"
         />
 
-        <Button
-          title="Save Reading"
-          onPress={saveReading}
-          color="#28a745" // Green color for save button
-        />
+        <TouchableOpacity style={styles.saveButton} onPress={saveReading}>
+          <Ionicons name="checkmark-circle-outline" size={24} color="#fff" />
+          <Text style={styles.saveButtonText}>Save Reading</Text>
+        </TouchableOpacity>
 
         <Text style={styles.recentReadingsTitle}>Recent Readings:</Text>
         {recentReadings.length === 0 ? (
-          <Text>No readings yet. Enter some data!</Text>
+          <Text style={styles.noReadingsText}>No readings yet. Enter some data!</Text>
         ) : (
-          recentReadings.slice(0, 5).map((reading) => ( // Display only the last 5
-            <View key={reading.id} style={styles.readingItem}>
+          recentReadings.slice(0, 7).map((reading) => ( // Display the last 7 readings
+            <View key={reading.id} style={[styles.readingItem, getReadingStyle(reading.value)]}>
               <Text style={styles.readingText}>
-                {new Date(reading.timestamp).toLocaleString()}: {reading.value} mg/dL
+                {new Date(reading.timestamp).toLocaleString('en-US', { // Changed to 'en-US' locale
+                    year: 'numeric', month: 'numeric', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                })}:
+                <Text style={styles.readingValueText}> {reading.value} mg/dL</Text>
               </Text>
+              <TouchableOpacity onPress={() => deleteReading(reading.id)} style={styles.deleteButton}>
+                <Ionicons name="trash-outline" size={20} color="#666" />
+              </TouchableOpacity>
             </View>
           ))
         )}
 
         {recentReadings.length > 0 && (
           <View style={styles.clearButtonContainer}>
-            <Button
-              title="Clear All Readings"
-              onPress={clearAllReadings}
-              color="#dc3545" // Red color for clear button
-            />
+            <TouchableOpacity style={styles.clearButton} onPress={clearAllReadings}>
+              <Ionicons name="remove-circle-outline" size={24} color="#fff" />
+              <Text style={styles.clearButtonText}>Clear All Data</Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -140,61 +248,121 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 20,
+    backgroundColor: '#E0F2F7', // Light blue background for the entire screen
   },
   container: {
-    flex: 1,
     width: '90%',
     alignItems: 'center',
-    backgroundColor: '#e0f7fa', // Light blue background
+    backgroundColor: '#fff', // White background for the main card
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 15, // More rounded corners
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 }, // More prominent shadow
     shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28, // Slightly larger title
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: 25,
     color: '#333',
   },
   input: {
-    height: 50,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 8,
+    height: 55, // Slightly taller
+    borderColor: '#a0d8e6', // Light blue border
+    borderWidth: 2, // Slightly thicker border
+    borderRadius: 10,
     width: '100%',
     paddingHorizontal: 15,
     marginBottom: 20,
     fontSize: 18,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f8f8', // Slightly grey background for the input
+    color: '#333',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#28a745', // Green
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    width: '100%',
+    marginBottom: 10,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
   recentReadingsTitle: {
-    fontSize: 20,
+    fontSize: 22, // More prominent readings title
     fontWeight: 'bold',
     marginTop: 30,
     marginBottom: 15,
     color: '#555',
   },
+  noReadingsText: {
+    fontSize: 16,
+    color: '#777',
+    textAlign: 'center',
+    marginTop: 10,
+  },
   readingItem: {
-    backgroundColor: '#f9f9f9',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12, // More vertical padding
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginBottom: 8,
     width: '100%',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderLeftWidth: 5, // Color indicator
+    backgroundColor: '#f0faff', // Light background for each item
   },
   readingText: {
     fontSize: 16,
     color: '#333',
+    flex: 1, // Allows text to take necessary space
+  },
+  readingValueText: {
+    fontWeight: 'bold', // Value in bold
+  },
+  deleteButton: {
+    padding: 5,
+    marginLeft: 10,
+  },
+  // Styles for the reading color indicator
+  readingLow: {
+    borderLeftColor: '#ffc107', // Yellow for low
+  },
+  readingTarget: {
+    borderLeftColor: '#28a745', // Green for target
+  },
+  readingHigh: {
+    borderLeftColor: '#dc3545', // Red for high
   },
   clearButtonContainer: {
-    marginTop: 20,
+    marginTop: 25, // More spacing
     width: '100%',
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dc3545', // Red
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderRadius: 10,
+    width: '100%',
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 

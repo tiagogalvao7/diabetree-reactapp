@@ -3,11 +3,11 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Importa os teus ecrãs e navegadores
+// Import your screens
+import HomeScreen from '../screens/HomeScreen';
 import DataEntryScreen from '../screens/DataEntryScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import HomeStackNavigator from './HomeStackNavigator'; // Importa o novo Stack Navigator
 import ShopScreen from '../screens/ShopScreen';
+import CollectionScreen from '../screens/CollectionScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,32 +16,57 @@ const MainTabNavigator = () => {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
+          let iconName: keyof typeof Ionicons.glyphMap = 'help-circle'; // Um ícone padrão seguro
 
-          if (route.name === 'Home') { // O nome da rota da Tab continua a ser 'Home'
+          if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Insert Data') {
+          } else if (route.name === 'Data Entry') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
-          } else if (route.name === 'Shop') { // Add icon logic for Shop tab
-            iconName = focused ? 'basket' : 'basket-outline';
+          } else if (route.name === 'Shop') {
+            iconName = focused ? 'cart' : 'cart-outline';
+          } else if (route.name === 'Collection') {
+            iconName = focused ? 'leaf' : 'leaf-outline';
           }
-          // @ts-ignore
+
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: 'tomato',
+        tabBarActiveTintColor: '#007bff',
         tabBarInactiveTintColor: 'gray',
-        headerShown: false, // O cabeçalho será gerido pelo Stack Navigator
+        headerShown: false, // Esconde o cabeçalho padrão para as tabs
       })}
     >
       <Tab.Screen
-        name="Home" // O nome da Tab continua a ser "Home"
-        component={HomeStackNavigator} // Agora renderiza o Stack Navigator
+        name="Home"
+        component={HomeScreen}
+        options={{
+          title: 'Home', // Adiciona um título explícito para a tela
+          tabBarLabel: 'Home', // Adiciona um rótulo explícito para a aba
+        }}
       />
-      <Tab.Screen name="Insert Data" component={DataEntryScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-      <Tab.Screen name="Shop" component={ShopScreen} />
+      <Tab.Screen
+        name="Data Entry"
+        component={DataEntryScreen}
+        options={{
+          title: 'Data Entry',
+          tabBarLabel: 'Data Entry',
+        }}
+      />
+      <Tab.Screen
+        name="Shop"
+        component={ShopScreen}
+        options={{
+          title: 'Shop',
+          tabBarLabel: 'Shop',
+        }}
+      />
+      <Tab.Screen
+        name="Collection"
+        component={CollectionScreen}
+        options={{
+          title: 'Collection',
+          tabBarLabel: 'Collection',
+        }}
+      />
     </Tab.Navigator>
   );
 };

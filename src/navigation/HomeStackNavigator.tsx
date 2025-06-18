@@ -1,28 +1,46 @@
-// src/navigation/HomeStackNavigator.tsx
+// src/navigation/MainTabNavigator.tsx
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
-// Importa os ecrãs
+// Import your screens
 import HomeScreen from '../screens/HomeScreen';
-import RegisterPatientScreen from '../screens/RegisterPatientScreen'; // new screen
+import DataEntryScreen from '../screens/DataEntryScreen';
+import ShopScreen from '../screens/ShopScreen';
+import CollectionScreen from '../screens/CollectionScreen'; // Ensure this is imported
 
-const HomeStack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
-const HomeStackNavigator = () => {
+const MainTabNavigator = () => {
   return (
-    <HomeStack.Navigator>
-      <HomeStack.Screen
-        name="HomeBase" // Nome interno para a tela base da pilha
-        component={HomeScreen}
-        options={{ headerShown: false }} // Não mostra cabeçalho duplicado se já tiver aba
-      />
-      <HomeStack.Screen
-        name="RegisterPatient" // Nome da rota para este ecrã
-        component={RegisterPatientScreen}
-        options={{ title: 'Insert Patient' }} // Título no cabeçalho
-      />
-    </HomeStack.Navigator>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ focused, color, size }) => {
+          let iconName: keyof typeof Ionicons.glyphMap = 'help-circle'; // Default icon
+
+          if (route.name === 'Home') {
+            iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'Data Entry') {
+            iconName = focused ? 'add-circle' : 'add-circle-outline';
+          } else if (route.name === 'Shop') {
+            iconName = focused ? 'cart' : 'cart-outline';
+          } else if (route.name === 'Collection') {
+            iconName = focused ? 'leaf' : 'leaf-outline';
+          }
+          
+          return <Ionicons name={iconName} size={size} color={color} />;
+        },
+        tabBarActiveTintColor: '#007bff',
+        tabBarInactiveTintColor: 'gray',
+        headerShown: false, // We will manage headers in the AppNavigator
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Data Entry" component={DataEntryScreen} />
+      <Tab.Screen name="Shop" component={ShopScreen} />
+      <Tab.Screen name="Collection" component={CollectionScreen} />
+    </Tab.Navigator>
   );
 };
 
-export default HomeStackNavigator;
+export default MainTabNavigator;

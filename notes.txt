@@ -1,6 +1,18 @@
-Futuramente o plano é colocar os dados do paciente na blockchain
-O sonho era conseguir ligar a aplicação à app do FreeStyle Libre
-Ter uma árvore default
-Ter uma árvore que fica mais bonita ou não, consoante a média dos valores
-Ter uma shop com várias árvores: Comprar árvores com moedas que se vão ganhando consoante os valores no tempo alvo
-Quandi adicionamos uma leitura de glicemia, ter um input para adicionar uma nota
+->Futuramente: o plano é colocar os dados do paciente na blockchain.
+             : para já as imagens estão quietas (pngs), mas o objetivo é colocar árvores "vivas".
+->O sonho era conseguir ligar a aplicação à app do FreeStyle Libre e recolher dados em tempo real em vez de inserir os valores manualmente.
+->Ter uma árvore default.
+->Ter uma árvore que fica mais bonita ou não, consoante a média dos valores.
+->Ter uma shop com várias árvores: Comprar árvores com moedas que se vão ganhando consoante os valores no tempo alvo.
+->Quando adicionamos uma leitura de glicemia, ter um input para adicionar uma nota.
+->Filtrar leituras por data: 7,14,30 dias.
+
+TO DO:
+->Mostrar primeiro as owned (e em primeiro a que está a ser usada) e só depois as outras;
+->Apple tree nao aparece na shop
+
+->Push no Github
+
+->git add .
+->git commit -m "<some text>"
+->git push
