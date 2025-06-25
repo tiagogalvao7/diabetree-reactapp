@@ -8,8 +8,14 @@
 ->Filtrar leituras por data: 7,14,30 dias.
 
 TO DO:
-->Mostrar primeiro as owned (e em primeiro a que está a ser usada) e só depois as outras;
-->Apple tree nao aparece na shop
+->Badges: Registos: Primeiro Registo, 100 Registos, 500 registos, 1000 registos.
+          Streak: Record 3 dias consecutivos, 14 dias, 90 dias.
+          Trees: Collect 1 árvore, 3 árvores, 5 árvores
+          Healthy Levels: 3 dias consecutivos, 7 dias, 14 dias, 30 dias
+          último Badge de todos os tipos tem que ser diferente, e chamar QQ coisa master
+
+->Arranjar 3 badges diferentes: um para trees, um para readings, e outro para tempo no intervalo.
+->Melhorar Data Entry screen. Filtrar por 7 dias, 14 dias e 30 dias.
 
 ->Push no Github
 

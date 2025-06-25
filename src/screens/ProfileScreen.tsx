@@ -5,6 +5,7 @@ import { useNavigation, useFocusEffect, NavigationProp } from '@react-navigation
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Import useSafeAreaInsets
 
 import { AppStackParamList } from '../navigation/AppNavigator';
 
@@ -21,6 +22,7 @@ interface UserProfile {
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+  const insets = useSafeAreaInsets(); // Initialize safe area insets
   const [profile, setProfile] = useState<UserProfile>({ name: 'Guest User', email: 'guest@example.com' });
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -195,10 +197,23 @@ const ProfileScreen = () => {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top + (Platform.OS === 'android' ? 20 : 0) }]} // Dynamic paddingTop
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      {/* Custom Back Button - Fixed at top-left */}
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={[styles.backButton, { top: insets.top + (Platform.OS === 'android' ? 10 : 0) }]} // Dynamic top position
+      >
+        <Ionicons name="arrow-back" size={30} color="#333" />
+      </TouchableOpacity>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Main Title/Header Section */}
+        <View style={styles.mainTitleContainer}>
+            <Text style={styles.mainTitle}>Your Profile</Text>
+        </View>
+
         {/* Profile Picture Placeholder */}
         <View style={styles.profilePictureContainer}>
           <Ionicons name="person-circle-outline" size={100} color="#007bff" />
@@ -207,7 +222,6 @@ const ProfileScreen = () => {
         {isEditing ? (
           // --- EDITING MODE ---
           <View style={styles.card}>
-            {/* Moved subtitle inside the card for better context in edit mode */}
             <Text style={styles.subtitleInCard}>Manage your account settings here.</Text>
 
             {/* Input fields */}
@@ -294,7 +308,6 @@ const ProfileScreen = () => {
                 <Ionicons name="pencil-outline" size={24} color="#007bff" />
             </TouchableOpacity>
 
-            {/* Moved subtitle inside the card for better context in display mode */}
             <Text style={styles.subtitleInCard}>Manage your account settings here.</Text>
 
             {/* Profile details */}
@@ -331,15 +344,6 @@ const ProfileScreen = () => {
             </View>
           </View>
         )}
-
-        {/* Removed: Go Back button */}
-        {/* <View style={styles.goBackButtonContainer}>
-          <Button
-            title="Go Back"
-            onPress={() => navigation.goBack()}
-            color="#6c757d"
-          />
-        </View> */}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -349,6 +353,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E0F2F7',
+    // paddingTop will be set dynamically using insets
   },
   scrollContent: {
     flexGrow: 1,
@@ -366,6 +371,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: '#555',
+  },
+  // NEW: Back button styling
+  backButton: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+    // top will be set dynamically using insets
+  },
+  // NEW: Main Title/Header container styling
+  mainTitleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 30, // Space below the title
+    marginTop: 30, // Space below the back button's typical area
+  },
+  mainTitle: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
   profilePictureContainer: {
     width: 120,
@@ -390,23 +415,21 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
     marginBottom: 30,
-    position: 'relative', // Needed for absolute positioning of pencil icon
+    position: 'relative',
   },
-  // NEW: Style for subtitle when inside the card
   subtitleInCard: {
-    fontSize: 14, // Slightly smaller for context
-    color: '#888', // Lighter color
+    fontSize: 14,
+    color: '#888',
     textAlign: 'center',
-    marginBottom: 20, // Space below it
-    paddingHorizontal: 10, // Some horizontal padding
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
-  // NEW: Style for the edit pencil icon
   editPencilIcon: {
     position: 'absolute',
     top: 15,
     right: 15,
-    padding: 5, // Make it easier to tap
-    zIndex: 1, // Ensure it's on top
+    padding: 5,
+    zIndex: 1,
   },
   detailRow: {
     flexDirection: 'row',
@@ -505,12 +528,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  // Removed goBackButtonContainer as the button is removed
-  // goBackButtonContainer: {
-  //   marginTop: 30,
-  //   width: '80%',
-  //   marginBottom: 20,
-  // },
 });
 
 export default ProfileScreen;

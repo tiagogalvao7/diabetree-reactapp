@@ -1,12 +1,11 @@
 // src/screens/HomeScreen.tsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, Alert, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, Alert, TouchableOpacity, Animated, Easing, ActivityIndicator } from 'react-native';
 import { useNavigation, NavigationProp, CompositeNavigationProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Progress from 'react-native-progress';
 import { Ionicons } from '@expo/vector-icons';
 
-// Import BOTH parameter lists
 import { AppStackParamList, MainTabParamList } from '../navigation/AppNavigator';
 
 interface GlucoseReading {
@@ -28,126 +27,135 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 >;
 
 const TREE_MAX_STAGE_KEY = '@tree_max_stage';
-const MIN_REQUIRED_READINGS_FOR_EVALUATION = 7;
 const USER_COINS_KEY = '@user_coins';
 const EQUIPPED_TREE_KEY = '@equipped_tree_id';
 const USER_OWNED_TREES_KEY = '@user_owned_trees';
+const LAST_PROGRESS_EVALUATION_DATE_KEY = '@last_progress_evaluation_date';
+const DAILY_COIN_BONUS_CLAIMED_KEY = '@daily_coin_bonus_claimed';
 
-const STAGE_PROGRESS_REQUIREMENTS: { [key: number]: number } = {
-    1: 7,
-    2: 10,
-    3: 20,
-    4: 0,
+// These are the *cumulative* unique on-target readings needed to *reach* each stage.
+// For example, to reach Stage 2, you need 7 unique on-target readings.
+// To reach Stage 3, you need 7 + 10 = 17 unique on-target readings.
+const CUMULATIVE_STAGE_REQUIREMENTS: { [key: number]: number } = {
+    1: 0,  // You are at stage 1 with 0 unique on-target readings (just starting)
+    2: 7,  // To get to stage 2, you need 7 unique on-target readings (>= 7 and < 17)
+    3: 17, // To get to stage 3, you need 17 unique on-target readings (>= 17 and < 37)
+    4: 37, // To get to stage 4, you need 37 unique on-target readings (>= 37)
 };
 
 const MAX_GENERIC_TREE_STAGE = 4;
+const API_BASE_URL = 'http://192.168.2.214:3000'; // Make sure this is your correct IP
+const MIN_TIME_BETWEEN_READINGS_FOR_PROGRESS = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-const calculatePotentialTreeStage = (allReadings: GlucoseReading[]): { potentialStage: number; recentCount: number; percentageInTarget: number } => {
+const calculateTreeMetrics = (allReadings: GlucoseReading[]): { uniqueOnTargetReadingsCount: number; recentUniqueReadingsCount: number; } => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const recentReadings = allReadings.filter(reading =>
-        new Date(reading.timestamp).getTime() >= sevenDaysAgo.getTime()
-    );
+    const validRecentReadings: GlucoseReading[] = [];
+    let lastValidReadingTime = 0;
 
-    const recentReadingsCount = recentReadings.length;
+    const sortedReadings = [...allReadings].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    let percentageInTarget = 0;
-    let potentialStage = 1;
-
-    if (recentReadingsCount < MIN_REQUIRED_READINGS_FOR_EVALUATION) {
-        percentageInTarget = (recentReadingsCount / MIN_REQUIRED_READINGS_FOR_EVALUATION) * 100;
-        potentialStage = 1;
-        return { potentialStage: potentialStage, recentCount: recentReadingsCount, percentageInTarget: percentageInTarget };
+    for (const reading of sortedReadings) {
+        const readingTime = new Date(reading.timestamp).getTime();
+        // Only consider readings from the last 7 days
+        if (readingTime >= sevenDaysAgo.getTime()) {
+            // Check if it's the first valid reading OR if 5 minutes have passed since the last valid one
+            if (validRecentReadings.length === 0 || (readingTime - lastValidReadingTime >= MIN_TIME_BETWEEN_READINGS_FOR_PROGRESS)) {
+                validRecentReadings.push(reading);
+                lastValidReadingTime = readingTime;
+            }
+        }
     }
 
     const targetMin = 70;
     const targetMax = 180;
 
-    const readingsInTarget = recentReadings.filter(reading =>
+    const uniqueOnTargetReadings = validRecentReadings.filter(reading =>
         reading.value >= targetMin && reading.value <= targetMax
-    ).length;
+    );
 
-    percentageInTarget = (readingsInTarget / recentReadingsCount) * 100;
-
-    if (percentageInTarget >= 80) {
-        potentialStage = 4;
-    } else if (percentageInTarget >= 55) {
-        potentialStage = 3;
-    } else if (percentageInTarget >= 30) {
-        potentialStage = 2;
-    } else {
-        potentialStage = 1;
-    }
-
-    return { potentialStage: potentialStage, recentCount: recentReadingsCount, percentageInTarget: percentageInTarget };
+    return { 
+        uniqueOnTargetReadingsCount: uniqueOnTargetReadings.length, // Number of unique, on-target readings in last 7 days
+        recentUniqueReadingsCount: validRecentReadings.length, // Total unique readings in last 7 days (on-target or not)
+    };
 };
 
 const HomeScreen = () => {
     const navigation = useNavigation<HomeScreenNavigationProp>();
-    const [currentTreeStage, setCurrentTreeStage] = useState(1);
-    const [totalGlucoseReadingsCount, setTotalGlucoseReadingsCount] = useState(0);
-    const [recentGlucoseReadingsCount, setRecentGlucoseReadingsCount] = useState(0);
+    const [currentTreeStage, setCurrentTreeStage] = useState(0); // 0 indicates not yet loaded
+    const [uniqueOnTargetReadingsCount, setUniqueOnTargetReadingsCount] = useState(0); // Total unique on-target readings from API
+    const [recentUniqueReadingsCount, setRecentUniqueReadingsCount] = useState(0); // Total unique readings (on-target or not)
     const [treeProgressPercentage, setTreeProgressPercentage] = useState(0);
-    const [maxTreeStageReached, setMaxTreeStageReached] = useState(1);
-    const [readingsInCurrentStageCount, setReadingsInCurrentStageCount] = useState(0);
     const [userCoins, setUserCoins] = useState(0);
     const [equippedTreeId, setEquippedTreeId] = useState<string>('normal_tree');
+    const [isDataLoading, setIsDataLoading] = useState(true);
 
-    // --- Variáveis de Animação ---
     const treeImageFadeAnim = useRef(new Animated.Value(0)).current;
     const treeImageScaleAnim = useRef(new Animated.Value(0.8)).current;
     const logoTitleTranslateY = useRef(new Animated.Value(-50)).current;
     const logoTitleOpacity = useRef(new Animated.Value(0)).current;
 
-    // NOVAS VARIÁVEIS PARA ANIMAÇÃO DE PULSAÇÃO DA PLANTA
     const pulseScaleAnim = useRef(new Animated.Value(1)).current;
     const pulseTranslateYAnim = useRef(new Animated.Value(0)).current;
-    // --- Fim Variáveis de Animação ---
-
 
     const allCollectableTrees: TreeItem[] = [
         {
             id: 'normal_tree',
             name: 'Normal Tree',
-            collectionImage: require('../../assets/images/normal_tree.png'),
-            stage5Image: require('../../assets/images/normal_tree.png'),
+            collectionImage: require('../../assets/images/trees/normal_tree.png'),
+            stage5Image: require('../../assets/images/trees/normal_tree.png'),
         },
         {
             id: 'oak',
             name: 'Oak Tree',
-            collectionImage: require('../../assets/images/oak_tree_stage5.png'),
-            stage5Image: require('../../assets/images/oak_tree_stage5.png'),
+            collectionImage: require('../../assets/images/trees/oak_tree_stage5.png'),
+            stage5Image: require('../../assets/images/trees/oak_tree_stage5.png'),
         },
         {
             id: 'willow',
             name: 'Willow Tree',
-            collectionImage: require('../../assets/images/willow_tree_stage5.png'),
-            stage5Image: require('../../assets/images/willow_tree_stage5.png'),
+            collectionImage: require('../../assets/images/trees/willow_tree_stage5.png'),
+            stage5Image: require('../../assets/images/trees/willow_tree_stage5.png'),
         },
         {
             id: 'pine',
             name: 'Pine Tree',
-            collectionImage: require('../../assets/images/pine_tree_stage5.png'),
-            stage5Image: require('../../assets/images/pine_tree_stage5.png'),
+            collectionImage: require('../../assets/images/trees/pine_tree_stage5.png'),
+            stage5Image: require('../../assets/images/trees/pine_tree_stage5.png'),
         }
     ];
 
     const getEquippedTree = () => allCollectableTrees.find(tree => tree.id === equippedTreeId) || allCollectableTrees[0];
 
-    const loadAndCalculateTreeStage = useCallback(async () => {
+    const fetchGlucoseReadings = useCallback(async (): Promise<GlucoseReading[]> => {
         try {
-            const jsonValue = await AsyncStorage.getItem('@glucose_readings');
-            const allReadings: GlucoseReading[] = jsonValue != null ? JSON.parse(jsonValue) : [];
+            const response = await fetch(`${API_BASE_URL}/glucoseReadings`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`HTTP error! status: ${response.status}, response: ${errorText}`);
+                return [];
+            }
+            const data = await response.json();
+            return data as GlucoseReading[];
+        } catch (error) {
+            console.error("Failed to fetch glucose readings from API:", error);
+            Alert.alert("Connection Error", "Could not fetch glucose readings from the local API. Check if json-server is running, your machine's IP is correct, and firewall is not blocking.");
+            return [];
+        }
+    }, []);
 
-            setTotalGlucoseReadingsCount(allReadings.length);
+    const loadAndCalculateTreeStage = useCallback(async () => {
+        setIsDataLoading(true);
 
-            const storedCoins = await AsyncStorage.getItem(USER_COINS_KEY);
-            const currentCoins = storedCoins != null ? parseInt(storedCoins, 10) : 0;
+        try {
+            const allReadings = await fetchGlucoseReadings();
+            
+            let currentCoins = parseInt(await AsyncStorage.getItem(USER_COINS_KEY) || '0', 10);
             setUserCoins(currentCoins);
 
-            const storedMaxStage = await AsyncStorage.getItem(TREE_MAX_STAGE_KEY);
-            const previousMaxStageInStorage = storedMaxStage != null ? parseInt(storedMaxStage, 10) : 1;
+            let previousMaxStageInStorage = parseInt(await AsyncStorage.getItem(TREE_MAX_STAGE_KEY) || '1', 10);
+            previousMaxStageInStorage = Math.max(1, Math.min(previousMaxStageInStorage, MAX_GENERIC_TREE_STAGE));
 
             const storedEquippedTree = await AsyncStorage.getItem(EQUIPPED_TREE_KEY);
             const ownedTreesJson = await AsyncStorage.getItem(USER_OWNED_TREES_KEY);
@@ -160,141 +168,152 @@ const HomeScreen = () => {
                 setEquippedTreeId('normal_tree');
             }
 
-            const { potentialStage, recentCount, percentageInTarget } = calculatePotentialTreeStage(allReadings);
-
-            setRecentGlucoseReadingsCount(recentCount);
+            const { uniqueOnTargetReadingsCount: calculatedUniqueOnTarget, recentUniqueReadingsCount: calculatedRecentUnique } = calculateTreeMetrics(allReadings);
+            setUniqueOnTargetReadingsCount(calculatedUniqueOnTarget);
+            setRecentUniqueReadingsCount(calculatedRecentUnique);
 
             let newTreeStageToShow = previousMaxStageInStorage;
-            let hasLeveledUp = false;
 
-            const storedReadingsInCurrentStage = await AsyncStorage.getItem(`@tree_stage_progress_${previousMaxStageInStorage}`);
-            let currentReadingsInStage = storedReadingsInCurrentStage != null ? parseInt(storedReadingsInCurrentStage, 10) : 0;
-
-            const readingsRequiredForNextStage = STAGE_PROGRESS_REQUIREMENTS[previousMaxStageInStorage] || 0;
-
-            if (previousMaxStageInStorage <= MAX_GENERIC_TREE_STAGE) {
-                if (recentCount >= MIN_REQUIRED_READINGS_FOR_EVALUATION && percentageInTarget >= (
-                    previousMaxStageInStorage === 1 ? 30 :
-                    previousMaxStageInStorage === 2 ? 55 :
-                    previousMaxStageInStorage === 3 ? 80 :
-                    0
-                ) && currentReadingsInStage < readingsRequiredForNextStage) {
-                    currentReadingsInStage += 1;
-                    await AsyncStorage.setItem(`@tree_stage_progress_${previousMaxStageInStorage}`, currentReadingsInStage.toString());
-                } else if (recentCount < MIN_REQUIRED_READINGS_FOR_EVALUATION && previousMaxStageInStorage === 1) {
-                    currentReadingsInStage = Math.min(recentCount, readingsRequiredForNextStage);
-                    await AsyncStorage.setItem(`@tree_stage_progress_${previousMaxStageInStorage}`, currentReadingsInStage.toString());
-                }
-            }
-            setReadingsInCurrentStageCount(currentReadingsInStage);
-
-            if (potentialStage > previousMaxStageInStorage && previousMaxStageInStorage < MAX_GENERIC_TREE_STAGE) {
-                if (currentReadingsInStage >= readingsRequiredForNextStage) {
-                    newTreeStageToShow = previousMaxStageInStorage + 1;
-                    Alert.alert("Congratulations!", `Your tree grew to level ${newTreeStageToShow}! Keep up the good work!`);
-                    hasLeveledUp = true;
-                    await AsyncStorage.setItem(TREE_MAX_STAGE_KEY, newTreeStageToShow.toString());
-                    await AsyncStorage.setItem(`@tree_stage_progress_${newTreeStageToShow}`, '0');
-                    setReadingsInCurrentStageCount(0);
-                }
-            } else if (potentialStage < previousMaxStageInStorage) {
-                newTreeStageToShow = potentialStage;
-                if (newTreeStageToShow < previousMaxStageInStorage) {
-                    await AsyncStorage.setItem(TREE_MAX_STAGE_KEY, newTreeStageToShow.toString());
-                    await AsyncStorage.setItem(`@tree_stage_progress_${newTreeStageToShow}`, '0');
-                    setReadingsInCurrentStageCount(0);
-                }
+            // Determine the new tree stage based on cumulative unique on-target readings
+            let determinedStage = 1;
+            if (calculatedUniqueOnTarget >= CUMULATIVE_STAGE_REQUIREMENTS[4]) {
+                determinedStage = 4;
+            } else if (calculatedUniqueOnTarget >= CUMULATIVE_STAGE_REQUIREMENTS[3]) {
+                determinedStage = 3;
+            } else if (calculatedUniqueOnTarget >= CUMULATIVE_STAGE_REQUIREMENTS[2]) {
+                determinedStage = 2;
             } else {
-                newTreeStageToShow = potentialStage;
+                determinedStage = 1;
             }
 
+            // Check for stage changes and alert user
+            if (determinedStage > previousMaxStageInStorage) {
+                newTreeStageToShow = determinedStage;
+                Alert.alert("Congratulations!", `Your tree grew to level ${newTreeStageToShow}! Keep up the good work!`);
+                await AsyncStorage.setItem(TREE_MAX_STAGE_KEY, newTreeStageToShow.toString());
+            } else if (determinedStage < previousMaxStageInStorage) {
+                newTreeStageToShow = determinedStage;
+                Alert.alert("Oh no!", `Your tree regressed to level ${newTreeStageToShow}. Focus on consistent readings to help it recover!`);
+                await AsyncStorage.setItem(TREE_MAX_STAGE_KEY, newTreeStageToShow.toString());
+            } else {
+                newTreeStageToShow = previousMaxStageInStorage;
+            }
+
+            // Ensure the stage never goes below 1
             if (newTreeStageToShow < 1) {
                 newTreeStageToShow = 1;
             }
 
             setCurrentTreeStage(newTreeStageToShow);
-            setMaxTreeStageReached(newTreeStageToShow);
 
+            // --- Daily Coin Bonus Logic ---
+            const lastEvaluationDate = await AsyncStorage.getItem(LAST_PROGRESS_EVALUATION_DATE_KEY);
+            const today = new Date().toISOString().slice(0, 10);
+            if (!lastEvaluationDate || lastEvaluationDate < today) {
+                await AsyncStorage.setItem(LAST_PROGRESS_EVALUATION_DATE_KEY, today);
+                await AsyncStorage.removeItem(DAILY_COIN_BONUS_CLAIMED_KEY); // Reset daily bonus flag
 
-            let progressForBar = 0;
-            if (newTreeStageToShow < MAX_GENERIC_TREE_STAGE) {
-                if (recentCount < MIN_REQUIRED_READINGS_FOR_EVALUATION && newTreeStageToShow === 1) {
-                    progressForBar = percentageInTarget / 100;
-                } else {
-                    if (hasLeveledUp) {
-                        progressForBar = 0;
-                    } else {
-                        const currentStageRequirement = STAGE_PROGRESS_REQUIREMENTS[newTreeStageToShow] || 1;
-                        progressForBar = currentReadingsInStage / currentStageRequirement;
+                const targetMin = 70;
+                const targetMax = 180;
+                const readingsInTargetToday = allReadings.filter(r => 
+                    new Date(r.timestamp).toISOString().slice(0,10) === today &&
+                    r.value >= targetMin && r.value <= targetMax
+                ).length;
+
+                const dailyBonusClaimed = await AsyncStorage.getItem(DAILY_COIN_BONUS_CLAIMED_KEY);
+                if (!dailyBonusClaimed && readingsInTargetToday > 0) { // Only award if there's at least one on-target reading today
+                    let coinsToAdd = 0;
+                    // Award coins based on the current tree stage
+                    if (newTreeStageToShow === 4) coinsToAdd = 50;
+                    else if (newTreeStageToShow === 3) coinsToAdd = 30;
+                    else if (newTreeStageToShow === 2) coinsToAdd = 10;
+
+                    if (coinsToAdd > 0) {
+                        currentCoins += coinsToAdd;
+                        await AsyncStorage.setItem(USER_COINS_KEY, currentCoins.toString());
+                        await AsyncStorage.setItem(DAILY_COIN_BONUS_CLAIMED_KEY, 'true');
+                        Alert.alert("Daily Bonus!", `You earned ${coinsToAdd} coins for your health today!`);
                     }
                 }
+            }
+            setUserCoins(currentCoins);
+
+            // --- Calculate Progress Bar Percentage ---
+            let progressForBar = 0;
+            const currentStageCumulativeRequirement = CUMULATIVE_STAGE_REQUIREMENTS[newTreeStageToShow] || 0;
+            const nextStageCumulativeRequirement = CUMULATIVE_STAGE_REQUIREMENTS[newTreeStageToShow + 1];
+
+            if (newTreeStageToShow < MAX_GENERIC_TREE_STAGE) {
+                // Progress within the current stage towards the next
+                const progressSinceLastStage = calculatedUniqueOnTarget - currentStageCumulativeRequirement;
+                const requirementForNextSegment = nextStageCumulativeRequirement - currentStageCumulativeRequirement;
+                
+                if (requirementForNextSegment > 0) {
+                    progressForBar = Math.min(progressSinceLastStage / requirementForNextSegment, 1);
+                } else {
+                    progressForBar = 0; // Should not happen with correctly set requirements
+                }
             } else {
-                progressForBar = 1;
+                progressForBar = 1; // Tree is at max stage, bar is full
             }
             setTreeProgressPercentage(progressForBar);
 
         } catch (e) {
             console.error("Failed to load glucose data for tree stage:", e);
-            Alert.alert("Error", "Could not update tree status.");
+            Alert.alert("Error", "Could not update tree status. Check API connection and data format.");
+            setCurrentTreeStage(1); // Fallback to stage 1 on error
+            setTreeProgressPercentage(0);
+            setUniqueOnTargetReadingsCount(0);
+            setRecentUniqueReadingsCount(0);
+        } finally {
+            setIsDataLoading(false);
         }
-    }, []);
+    }, [fetchGlucoseReadings]);
 
-    // --- Função para Iniciar as Animações ---
+    // Animations logic remains the same
     const startAnimations = useCallback(() => {
-        treeImageFadeAnim.setValue(0);
-        treeImageScaleAnim.setValue(0.8);
-        logoTitleTranslateY.setValue(-50);
-        logoTitleOpacity.setValue(0);
+        if (currentTreeStage > 0) {
+            treeImageFadeAnim.stopAnimation();
+            treeImageScaleAnim.stopAnimation();
+            logoTitleTranslateY.stopAnimation();
+            logoTitleOpacity.stopAnimation();
+            pulseScaleAnim.stopAnimation();
+            pulseTranslateYAnim.stopAnimation();
 
-        pulseScaleAnim.setValue(1);
-        pulseTranslateYAnim.setValue(0);
+            treeImageFadeAnim.setValue(0);
+            treeImageScaleAnim.setValue(0.8);
+            logoTitleTranslateY.setValue(-50);
+            logoTitleOpacity.setValue(0);
+            pulseScaleAnim.setValue(1);
+            pulseTranslateYAnim.setValue(0);
 
-        const entranceAnimation = Animated.parallel([
-            Animated.timing(treeImageFadeAnim, { toValue: 1, duration: 1200, easing: Easing.ease, useNativeDriver: true }),
-            Animated.spring(treeImageScaleAnim, { toValue: 1, friction: 6, tension: 100, useNativeDriver: true }),
-            Animated.timing(logoTitleTranslateY, { toValue: 0, duration: 800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-            Animated.timing(logoTitleOpacity, { toValue: 1, duration: 800, easing: Easing.ease, useNativeDriver: true }),
-        ]);
+            const entranceAnimation = Animated.parallel([
+                Animated.timing(treeImageFadeAnim, { toValue: 1, duration: 1200, easing: Easing.ease, useNativeDriver: true }),
+                Animated.spring(treeImageScaleAnim, { toValue: 1, friction: 6, tension: 100, useNativeDriver: true }),
+                Animated.timing(logoTitleTranslateY, { toValue: 0, duration: 800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                Animated.timing(logoTitleOpacity, { toValue: 1, duration: 800, easing: Easing.ease, useNativeDriver: true }),
+            ]);
 
-        const plantPulseAnimation = Animated.loop(
-            Animated.parallel([
-                Animated.sequence([
-                    Animated.timing(pulseScaleAnim, {
-                        toValue: 1.02,
-                        duration: 1500,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseScaleAnim, {
-                        toValue: 1,
-                        duration: 1500,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
+            const plantPulseAnimation = Animated.loop(
+                Animated.parallel([
+                    Animated.sequence([
+                        Animated.timing(pulseScaleAnim, { toValue: 1.02, duration: 1500, easing: Easing.ease, useNativeDriver: true }),
+                        Animated.timing(pulseScaleAnim, { toValue: 1, duration: 1500, easing: Easing.ease, useNativeDriver: true }),
+                    ]),
+                    Animated.sequence([
+                        Animated.timing(pulseTranslateYAnim, { toValue: -2, duration: 1500, easing: Easing.ease, useNativeDriver: true }),
+                        Animated.timing(pulseTranslateYAnim, { toValue: 0, duration: 1500, easing: Easing.ease, useNativeDriver: true }),
+                    ]),
                 ]),
-                Animated.sequence([
-                    Animated.timing(pulseTranslateYAnim, {
-                        toValue: -2,
-                        duration: 1500,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(pulseTranslateYAnim, {
-                        toValue: 0,
-                        duration: 1500,
-                        easing: Easing.ease,
-                        useNativeDriver: true,
-                    }),
-                ]),
-            ]),
-            { iterations: -1 }
-        );
+                { iterations: -1 }
+            );
 
-        entranceAnimation.start(() => {
-            plantPulseAnimation.start();
-        });
-
+            entranceAnimation.start(() => {
+                plantPulseAnimation.start();
+            });
+        }
     }, [
+        currentTreeStage,
         treeImageFadeAnim, treeImageScaleAnim,
         logoTitleTranslateY, logoTitleOpacity,
         pulseScaleAnim, pulseTranslateYAnim
@@ -303,37 +322,38 @@ const HomeScreen = () => {
     useFocusEffect(
         useCallback(() => {
             loadAndCalculateTreeStage();
-            startAnimations();
             return () => {
                 treeImageFadeAnim.stopAnimation();
                 treeImageScaleAnim.stopAnimation();
                 logoTitleTranslateY.stopAnimation();
                 logoTitleOpacity.stopAnimation();
-
                 pulseScaleAnim.stopAnimation();
                 pulseTranslateYAnim.stopAnimation();
             };
-        }, [loadAndCalculateTreeStage, startAnimations])
+        }, [loadAndCalculateTreeStage])
     );
+
+    useEffect(() => {
+        if (currentTreeStage > 0) {
+            startAnimations();
+        }
+    }, [currentTreeStage, startAnimations]);
+
 
     const getTreeImageSource = () => {
         const equippedTree = getEquippedTree();
+        const stageToDisplay = currentTreeStage > 0 ? currentTreeStage : 1;
 
-        if (currentTreeStage === MAX_GENERIC_TREE_STAGE && equippedTree.stage5Image) {
+        if (stageToDisplay === MAX_GENERIC_TREE_STAGE && equippedTree.stage5Image) {
             return equippedTree.stage5Image;
-        }
-
-        switch (currentTreeStage) {
-            case 1:
-                return require('../../assets/images/tree_stage_1.png');
-            case 2:
-                return require('../../assets/images/tree_stage_2.png');
-            case 3:
-                return require('../../assets/images/tree_stage_3.png');
-            case 4:
-                return require('../../assets/images/tree_stage_4.png');
-            default:
-                return require('../../assets/images/tree_stage_1.png');
+        } else {
+            switch (stageToDisplay) {
+                case 1: return require('../../assets/images/trees/tree_stage_1.png');
+                case 2: return require('../../assets/images/trees/tree_stage_2.png');
+                case 3: return require('../../assets/images/trees/tree_stage_3.png');
+                case 4: return require('../../assets/images/trees/tree_stage_4.png');
+                default: return require('../../assets/images/trees/tree_stage_1.png');
+            }
         }
     };
 
@@ -342,12 +362,10 @@ const HomeScreen = () => {
     };
 
     const handleGoToAchievements = () => {
-        navigation.navigate('Achievements', {}); // Correção da chamada de navegação
+        navigation.navigate('Achievements', {});
     };
 
     const getDynamicMessage = () => {
-        const readingsNeededForNextLevel = STAGE_PROGRESS_REQUIREMENTS[currentTreeStage] - readingsInCurrentStageCount;
-
         if (currentTreeStage === MAX_GENERIC_TREE_STAGE) {
             if (equippedTreeId !== 'normal_tree') {
                 return `Your tree is flourishing! You're currently displaying the ${getEquippedTree().name}.`;
@@ -355,45 +373,61 @@ const HomeScreen = () => {
             return "Your tree is flourishing! Excellent work, keep monitoring your health to maintain it!";
         }
 
-        if (recentGlucoseReadingsCount < MIN_REQUIRED_READINGS_FOR_EVALUATION) {
-            const remainingReadings = MIN_REQUIRED_READINGS_FOR_EVALUATION - recentGlucoseReadingsCount;
-            if (remainingReadings > 0) {
-                return `Record ${remainingReadings} more readings in the last 7 days for a complete tree evaluation.`;
-            }
+        const requiredForNextStage = CUMULATIVE_STAGE_REQUIREMENTS[currentTreeStage + 1];
+        if (requiredForNextStage === undefined) { // Fallback for last stage or if requirements are not fully defined
+            return `Keep up the great work to make your tree grow!`;
         }
+        
+        const readingsNeeded = requiredForNextStage - uniqueOnTargetReadingsCount;
 
-        if (readingsNeededForNextLevel > 0) {
-            return `You need ${readingsNeededForNextLevel} more on-target readings for your tree to level up to Level ${currentTreeStage + 1}. Keep up the good work!`;
-        }
-
-        if (treeProgressPercentage >= 0.95 && currentTreeStage < MAX_GENERIC_TREE_STAGE) {
-            return `Almost there! Your tree is one step away from growing to Level ${currentTreeStage + 1}. Stay focused!`;
-        }
-
-        if (currentTreeStage === 1) {
-            return "Your tree needs attention. Record your readings to help it recover!";
-        }
-        if (currentTreeStage === 2) {
-            return "Your tree is recovering well! Maintain consistency in your readings.";
-        }
-        if (currentTreeStage === 3) {
-            return "Your tree is healthy! Continue with excellent control.";
+        if (readingsNeeded > 0) {
+            return `Record ${readingsNeeded} more unique on-target readings for your tree to level up to Level ${currentTreeStage + 1}. Keep up the good work!`;
         }
 
         return "Keep monitoring your glucose to watch your Diabetree grow!";
     };
 
+    const getProgressLabelText = () => {
+        if (currentTreeStage < MAX_GENERIC_TREE_STAGE) {
+            return `Progress to Level ${currentTreeStage + 1}:`;
+        }
+        return `Tree fully grown!`;
+    };
+
+    const getProgressCounterText = () => {
+        if (currentTreeStage < MAX_GENERIC_TREE_STAGE) {
+            const currentStageCumulativeRequirement = CUMULATIVE_STAGE_REQUIREMENTS[currentTreeStage] || 0;
+            const nextStageCumulativeRequirement = CUMULATIVE_STAGE_REQUIREMENTS[currentTreeStage + 1];
+            
+            // Calculate progress specifically for the current stage segment
+            const progressSinceLastStage = Math.max(0, uniqueOnTargetReadingsCount - currentStageCumulativeRequirement);
+            const requirementForNextSegment = nextStageCumulativeRequirement - currentStageCumulativeRequirement;
+
+            if (requirementForNextSegment > 0) {
+                return `${progressSinceLastStage} out of ${requirementForNextSegment} on-target readings.`;
+            }
+            return ``; // Should not happen if requirements are set correctly
+        }
+        return ``;
+    };
+
+
+    if (isDataLoading) {
+        return (
+            <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color="#007bff" />
+                <Text style={styles.loadingText}>Loading data from API...</Text>
+            </View>
+        );
+    }
+
     return (
         <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.container}>
-                {/* Contêiner para os botões no canto superior direito */}
                 <View style={styles.topRightButtonsContainer}>
-                    {/* Botão de Achievements (NOVO) */}
                     <TouchableOpacity style={styles.achievementsButton} onPress={handleGoToAchievements}>
-                        {/* Ícone de troféu. Use 'trophy' para preenchido, 'trophy-outline' para contorno. */}
                         <Ionicons name="trophy-outline" size={36} color="#FFD700" />
                     </TouchableOpacity>
-                    {/* Botão de Perfil (já existente) */}
                     <TouchableOpacity style={styles.profileButton} onPress={handleGoToProfile}>
                         <Ionicons name="person-circle-outline" size={36} color="#007bff" />
                     </TouchableOpacity>
@@ -409,7 +443,7 @@ const HomeScreen = () => {
                     ]}
                 >
                     <Image
-                        source={require('../../assets/images/diabetes_logo.png')}
+                        source={require('../../assets/images/others/diabetes_logo.png')}
                         style={styles.logoImage}
                     />
                     <Text style={styles.title}>Diabetree!</Text>
@@ -421,20 +455,28 @@ const HomeScreen = () => {
                     <Text style={styles.coinsText}>💰 {userCoins}</Text>
                 </View>
 
-                <Animated.Image
-                    source={getTreeImageSource()}
-                    style={[
-                        styles.treeImage,
-                        {
-                            opacity: treeImageFadeAnim,
-                            transform: [
-                                { scale: treeImageScaleAnim },
-                                { scale: pulseScaleAnim },
-                                { translateY: pulseTranslateYAnim },
-                            ],
-                        },
-                    ]}
-                />
+                {currentTreeStage > 0 ? (
+                    <Animated.Image
+                        source={getTreeImageSource()}
+                        style={[
+                            styles.treeImage,
+                            {
+                                opacity: treeImageFadeAnim,
+                                transform: [
+                                    { scale: Animated.multiply(treeImageScaleAnim, pulseScaleAnim) },
+                                    { translateY: pulseTranslateYAnim },
+                                ],
+                            },
+                        ]}
+                    />
+                ) : (
+                    <View style={styles.treeImagePlaceholder}>
+                       <ActivityIndicator size="large" color="#007bff" />
+                       <Text>Loading tree...</Text>
+                    </View>
+                )}
+
+
                 <Text style={styles.treeStatusText}>
                     Tree Level: {currentTreeStage}
                     {currentTreeStage === 1 && ' (Needs attention)'}
@@ -446,7 +488,7 @@ const HomeScreen = () => {
                 <Text style={styles.dynamicMessageText}>{getDynamicMessage()}</Text>
 
                 <View style={styles.progressBarWrapper}>
-                    <Text style={styles.progressLabel}>Progress to next level:</Text>
+                    <Text style={styles.progressLabel}>{getProgressLabelText()}</Text>
                     <Progress.Bar
                         progress={treeProgressPercentage}
                         width={250}
@@ -459,11 +501,9 @@ const HomeScreen = () => {
                     <Text style={styles.progressText}>
                         {`Completed: ${(treeProgressPercentage * 100).toFixed(0)}%`}
                     </Text>
-                    {currentTreeStage < MAX_GENERIC_TREE_STAGE && (
-                        <Text style={styles.progressHintText}>
-                            {readingsInCurrentStageCount} out of {STAGE_PROGRESS_REQUIREMENTS[currentTreeStage] || 0} on-target readings for this level.
-                        </Text>
-                    )}
+                    <Text style={styles.progressHintText}>
+                        {getProgressCounterText()}
+                    </Text>
                 </View>
 
             </View>
@@ -474,13 +514,11 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
-        justifyContent: 'center',
         alignItems: 'center',
         paddingVertical: 20,
     },
     container: {
         flex: 1,
-        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#E0F2F7',
         width: '100%',
@@ -494,15 +532,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 10,
     },
-    profileButton: {
-        // estilos para o botão de perfil (se houver algum específico)
-    },
-    achievementsButton: {
-        // estilos para o botão de achievements (se houver algum específico)
-    },
+    profileButton: {},
+    achievementsButton: {},
     titleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginTop: 20,
         marginBottom: 8,
         paddingHorizontal: 20,
     },
@@ -527,6 +562,7 @@ const styles = StyleSheet.create({
     coinsContainer: {
         marginBottom: 20,
         alignItems: 'center',
+        marginTop: 10,
     },
     coinsText: {
         fontSize: 24,
@@ -538,7 +574,18 @@ const styles = StyleSheet.create({
         height: 250,
         resizeMode: 'contain',
         marginBottom: 20,
+        marginTop: 20,
         borderRadius: 10,
+    },
+    treeImagePlaceholder: {
+        width: 250,
+        height: 250,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        marginTop: 20,
+        borderRadius: 10,
+        backgroundColor: '#F0F0F0',
     },
     treeStatusText: {
         fontSize: 16,
@@ -556,7 +603,7 @@ const styles = StyleSheet.create({
     },
     progressBarWrapper: {
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 20,
         marginBottom: 20,
         width: '90%',
     },
@@ -578,12 +625,16 @@ const styles = StyleSheet.create({
         marginTop: 5,
         textAlign: 'center',
     },
-    progressHintTextWarning: {
-        fontSize: 13,
-        color: 'orange',
-        marginTop: 5,
-        fontWeight: 'bold',
-        textAlign: 'center',
+    loaderContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#E0F2F7',
+    },
+    loadingText: {
+        marginTop: 10,
+        fontSize: 18,
+        color: '#555',
     },
 });
 

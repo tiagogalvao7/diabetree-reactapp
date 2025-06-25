@@ -19,11 +19,11 @@ interface ShopItem {
 
 // --- DADOS DE TODOS OS ITENS DA LOJA ---
 const ALL_SHOP_ITEMS: ShopItem[] = [
-    { id: 'oak', name: 'Oak Tree Seed', price: 100, image: require('../../assets/images/oak_tree_stage5.png') }, // Ajustando preço para teste
-    { id: 'willow', name: 'Willow Tree Seed', price: 150, image: require('../../assets/images/willow_tree_stage5.png') },
-    { id: 'pine', name: 'Pine Tree Seed', price: 150, image: require('../../assets/images/pine_tree_stage5.png') },
-    { id: 'cherry', name: 'Cherry Tree Seed', price: 200, image: require('../../assets/images/cherry_tree_stage5.png') },
-    { id: 'apple', name: 'Apple Tree Seed', price: 220, image: require('../../assets/images/apple_tree_stage5.png') }
+    { id: 'oak', name: 'Oak Tree Seed', price: 100, image: require('../../assets/images/trees/oak_tree_stage5.png') }, // Ajustando preço para teste
+    { id: 'willow', name: 'Willow Tree Seed', price: 150, image: require('../../assets/images/trees/willow_tree_stage5.png') },
+    { id: 'pine', name: 'Pine Tree Seed', price: 150, image: require('../../assets/images/trees/pine_tree_stage5.png') },
+    { id: 'cherry', name: 'Cherry Tree Seed', price: 200, image: require('../../assets/images/trees/cherry_tree_stage5.png') },
+    { id: 'apple', name: 'Apple Tree Seed', price: 220, image: require('../../assets/images/trees/apple_tree_stage5.png') }
 ];
 
 // --- CONSTANTS AND STYLE CALCULATION ---

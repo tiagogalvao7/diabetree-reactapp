@@ -1,34 +1,30 @@
 // src/navigation/AppNavigator.tsx
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ParamListBase } from '@react-navigation/native'; // Import ParamListBase for base typing
+import { ParamListBase } from '@react-navigation/native';
 
-import MainTabNavigator from './MainTabNavigator'; // Your main Tab Navigator
-import ProfileScreen from '../screens/ProfileScreen'; // The Profile screen
-import AchievementsScreen from '../screens/AchievementsScreen'; // Importe a tela de Achievements
+import MainTabNavigator from './MainTabNavigator';
+import ProfileScreen from '../screens/ProfileScreen';
+import AchievementsScreen from '../screens/AchievementsScreen';
 
-// ** CRITICAL STEP: Define MainTabParamList **
-// This must EXACTLY match the `name` of the `Tab.Screen` in MainTabNavigator.tsx
 export type MainTabParamList = {
-  Home: undefined; // Home receives no direct parameters when navigating to it via tab
-  'Data Entry': undefined; // Data Entry also does not
+  Home: undefined;
+  'Data Entry': undefined;
   Shop: undefined;
   Collection: undefined;
 };
 
-// Define AppStackParamList for type safety
 export type AppStackParamList = {
   MainTabs: {
-    screen?: keyof MainTabParamList; // The name of the screen within MainTabs (e.g., 'Data Entry')
-    params?: any; // Any parameters that the inner screen needs
-  } | undefined; // Or 'undefined' if we don't pass parameters (it will go to the first tab by default)
-  Profile: undefined; // The profile screen has no parameters
-  Achievements: { isDailyBonusClaimable?: boolean }; // Adicione a rota Achievements aqui
+    screen?: keyof MainTabParamList;
+    params?: any;
+  } | undefined;
+  Profile: undefined;
+  Achievements: { isDailyBonusClaimable?: boolean };
 };
 
 const AppStack = createStackNavigator<AppStackParamList>();
 
-// No change needed here, as `initialRouteName` is now passed from App.tsx
 const AppNavigator = ({ initialRouteName }: { initialRouteName: keyof AppStackParamList }) => {
   return (
     <AppStack.Navigator initialRouteName={initialRouteName}>
@@ -37,17 +33,14 @@ const AppNavigator = ({ initialRouteName }: { initialRouteName: keyof AppStackPa
         name="Profile"
         component={ProfileScreen}
         options={{
-          title: 'Your Profile', // Title for the profile screen header
-          headerShown: true, // Ensures the header is visible for the profile screen
+          headerShown: false, // <-- This is the key change!
         }}
       />
-      {/* Adicione a tela de Achievements ao AppStack */}
       <AppStack.Screen
         name="Achievements"
         component={AchievementsScreen}
         options={{
-          title: 'Your Achievements', // Título para o cabeçalho da tela de Achievements
-          headerShown: true, // Garante que o cabeçalho esteja visível
+          headerShown: false,
         }}
       />
     </AppStack.Navigator>
