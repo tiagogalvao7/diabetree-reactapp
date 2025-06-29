@@ -3,7 +3,10 @@
     { "id": "1", "value": 110, "timestamp": "2025-06-25T08:00:00Z" },
     { "id": "2", "value": 130, "timestamp": "2025-06-25T12:00:00Z" },
     { "id": "3", "value": 130, "timestamp": "2025-06-25T16:00:00Z" },
-    { "id": "4", "value": 130, "timestamp": "2025-06-25T16:10:00Z" }
+    { "id": "4", "value": 130, "timestamp": "2025-06-25T16:10:00Z" },
+    { "id": "5", "value": 130, "timestamp": "2025-06-25T16:40:00Z" },
+    { "id": "6", "value": 130, "timestamp": "2025-06-25T16:50:00Z" },
+    { "id": "7", "value": 130, "timestamp": "2025-06-25T17:50:00Z" }
   ],
   "otherData": []
 }

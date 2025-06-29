@@ -146,7 +146,12 @@ const HomeScreen = () => {
     }, []);
 
     const loadAndCalculateTreeStage = useCallback(async () => {
-        setIsDataLoading(true);
+        // Set loading to true only if tree stage is not yet determined (first load)
+        // or if we explicitly want to show loading on subsequent refreshes.
+        // For flicker reduction, we only show it initially if currentTreeStage is 0.
+        if (currentTreeStage === 0) { 
+            setIsDataLoading(true);
+        }
 
         try {
             const allReadings = await fetchGlucoseReadings();
@@ -268,7 +273,8 @@ const HomeScreen = () => {
         } finally {
             setIsDataLoading(false);
         }
-    }, [fetchGlucoseReadings]);
+    }, [fetchGlucoseReadings, currentTreeStage]); // Added currentTreeStage to dependencies
+
 
     // Animations logic remains the same
     const startAnimations = useCallback(() => {
@@ -411,8 +417,10 @@ const HomeScreen = () => {
         return ``;
     };
 
-
-    if (isDataLoading) {
+    // The key change is here: conditionally render the loader.
+    // It will only show if `isDataLoading` is true AND `currentTreeStage` is 0 (meaning data hasn't loaded yet).
+    // On subsequent loads (when currentTreeStage > 0), the existing UI will remain visible.
+    if (isDataLoading && currentTreeStage === 0) {
         return (
             <View style={styles.loaderContainer}>
                 <ActivityIndicator size="large" color="#007bff" />
@@ -455,6 +463,8 @@ const HomeScreen = () => {
                     <Text style={styles.coinsText}>💰 {userCoins}</Text>
                 </View>
 
+                {/* This conditional rendering for the tree image remains,
+                    but now the *entire screen* loader (above) handles the initial state. */}
                 {currentTreeStage > 0 ? (
                     <Animated.Image
                         source={getTreeImageSource()}
@@ -470,6 +480,10 @@ const HomeScreen = () => {
                         ]}
                     />
                 ) : (
+                    // This placeholder will now only be shown if currentTreeStage is 0
+                    // and the *initial* loading screen (the 'if (isDataLoading && currentTreeStage === 0)' block)
+                    // has already finished its initial check, or if there's a very unusual state.
+                    // In practice, the initial loader should prevent this from being seen much.
                     <View style={styles.treeImagePlaceholder}>
                        <ActivityIndicator size="large" color="#007bff" />
                        <Text>Loading tree...</Text>

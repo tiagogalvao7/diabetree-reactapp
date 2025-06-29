@@ -22,3 +22,5 @@ TO DO:
 ->git add .
 ->git commit -m "<some text>"
 ->git push
+
+-> api: json-server --watch db.json --port 3000
