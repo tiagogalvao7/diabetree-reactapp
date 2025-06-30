@@ -8,11 +8,26 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AppStackParamList, MainTabParamList } from '../navigation/AppNavigator';
 
-interface GlucoseReading {
-    id: string;
-    value: number;
-    timestamp: string;
-}
+// IMPORTAÇÕES DA MISSÃO DIÁRIA
+import DailyMissionPopup from '../components/DailyMissionPopup'; // O componente do pop-up
+import {
+    GlucoseReading, // Reutiliza a interface já definida para leituras de glicose
+    DailyMission,
+    DAILY_MISSIONS,
+    DAILY_MISSION_STATE_KEY,
+    DAILY_MISSION_REWARD_COINS,
+    GLUCOSE_READINGS_KEY, // Chave para as leituras de glicose (já deve ter esta)
+    USER_COINS_KEY,       // Chave para as moedas do utilizador (já deve ter esta)
+    ACHIEVEMENTS_KEY,     // Chave para marcar recompensas diárias já dadas (já deve ter esta)
+} from '../utils/missions'; // Onde definimos tudo sobre as missões diárias
+
+// Certifique-se que esta interface GlucoseReading é consistente com a de missions.ts, ou remova
+// a duplicada aqui e use apenas a de missions.ts
+// interface GlucoseReading {
+//     id: string;
+//     value: number;
+//     timestamp: string;
+// }
 
 interface TreeItem {
     id: string;
@@ -26,12 +41,18 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
     NavigationProp<AppStackParamList>
 >;
 
+// COINS_KEY e GLUCOSE_READINGS_KEY já vêm de missions.ts, pode remover estas linhas daqui
+// const TREE_MAX_STAGE_KEY = '@tree_max_stage';
+// const USER_COINS_KEY = '@user_coins';
+// ... outras chaves ...
+
+// Essas chaves agora vêm de missions.ts, mas mantenha-as aqui se precisar delas para a árvore especificamente
 const TREE_MAX_STAGE_KEY = '@tree_max_stage';
-const USER_COINS_KEY = '@user_coins';
 const EQUIPPED_TREE_KEY = '@equipped_tree_id';
 const USER_OWNED_TREES_KEY = '@user_owned_trees';
 const LAST_PROGRESS_EVALUATION_DATE_KEY = '@last_progress_evaluation_date';
 const DAILY_COIN_BONUS_CLAIMED_KEY = '@daily_coin_bonus_claimed';
+
 
 // These are the *cumulative* unique on-target readings needed to *reach* each stage.
 // For example, to reach Stage 2, you need 7 unique on-target readings.
@@ -91,6 +112,11 @@ const HomeScreen = () => {
     const [equippedTreeId, setEquippedTreeId] = useState<string>('normal_tree');
     const [isDataLoading, setIsDataLoading] = useState(true);
 
+    // ESTADOS DA MISSÃO DIÁRIA
+    const [isDailyMissionPopupVisible, setIsDailyMissionPopupVisible] = useState(false);
+    const [currentDailyMissionDetails, setCurrentDailyMissionDetails] = useState<{ mission: DailyMission | null; isCompleted: boolean }>({ mission: null, isCompleted: false });
+
+
     const treeImageFadeAnim = useRef(new Animated.Value(0)).current;
     const treeImageScaleAnim = useRef(new Animated.Value(0.8)).current;
     const logoTitleTranslateY = useRef(new Animated.Value(-50)).current;
@@ -144,6 +170,106 @@ const HomeScreen = () => {
             return [];
         }
     }, []);
+
+    // Missão Diária: Interface e Função auxiliar para guardar/ler o estado
+    interface DailyMissionState {
+        currentMissionId: string | null;
+        isCompleted: boolean;
+        lastCheckedDate: string | null; // Data em que a missão foi gerada/verificada pela última vez
+    }
+
+    const getDailyMissionState = useCallback(async (allReadings: GlucoseReading[], currentUnlockedAchievements: string[]): Promise<DailyMissionState> => {
+        const today = new Date().toISOString().split('T')[0]; // Data de hoje no formato YYYY-MM-DD
+        let storedMissionState: DailyMissionState | null = null;
+        try {
+            const jsonState = await AsyncStorage.getItem(DAILY_MISSION_STATE_KEY);
+            if (jsonState) {
+                storedMissionState = JSON.parse(jsonState);
+            }
+        } catch (e) {
+            console.error("Failed to load daily mission state:", e);
+        }
+
+        let currentMissionState: DailyMissionState;
+        let missionJustCompleted = false; // Flag para saber se a missão foi concluída AGORA
+
+        // Se é um novo dia ou não há estado salvo, gera uma nova missão
+        if (!storedMissionState || storedMissionState.lastCheckedDate !== today) {
+            // Determina o índice da próxima missão de forma circular
+            const lastMissionIndex = storedMissionState ? DAILY_MISSIONS.findIndex(m => m.id === storedMissionState?.currentMissionId) : -1;
+            const nextMissionIndex = (lastMissionIndex + 1) % DAILY_MISSIONS.length;
+            const newMission = DAILY_MISSIONS[nextMissionIndex];
+
+            currentMissionState = {
+                currentMissionId: newMission.id,
+                isCompleted: newMission.checkCompletion(allReadings), // Verifica logo no início se já está completa
+                lastCheckedDate: today,
+            };
+            await AsyncStorage.setItem(DAILY_MISSION_STATE_KEY, JSON.stringify(currentMissionState));
+            console.log("New daily mission generated:", newMission.name);
+
+            // Se a nova missão já está completa no momento da geração (ex: utilizador já fez as leituras)
+            if (currentMissionState.isCompleted) {
+                const dailyRewardKey = `daily_reward_${currentMissionState.currentMissionId}_${currentMissionState.lastCheckedDate}`;
+                // Verifica se a recompensa para esta missão E para esta data já foi dada
+                if (!currentUnlockedAchievements.includes(dailyRewardKey)) {
+                    missionJustCompleted = true; // Marca para dar recompensa
+                }
+            }
+
+        } else {
+            // Se ainda é o mesmo dia, verifica novamente o estado da missão atual
+            const mission = DAILY_MISSIONS.find(m => m.id === storedMissionState?.currentMissionId);
+            if (mission) {
+                const isNowCompleted = mission.checkCompletion(allReadings);
+                if (isNowCompleted && !storedMissionState.isCompleted) {
+                    // Missão acabou de ser completada!
+                    currentMissionState = { ...storedMissionState, isCompleted: true };
+                    await AsyncStorage.setItem(DAILY_MISSION_STATE_KEY, JSON.stringify(currentMissionState));
+                    console.log("Daily mission completed:", mission.name);
+                    missionJustCompleted = true; // Marca para dar recompensa
+                } else {
+                    currentMissionState = storedMissionState; // Estado inalterado
+                }
+            } else {
+                // Caso a missão guardada não seja encontrada (ex: foi removida das DAILY_MISSIONS), reseta para a primeira
+                console.warn("Daily mission not found in DAILY_MISSIONS, resetting...");
+                const newMission = DAILY_MISSIONS[0];
+                currentMissionState = {
+                    currentMissionId: newMission.id,
+                    isCompleted: newMission.checkCompletion(allReadings),
+                    lastCheckedDate: today,
+                };
+                await AsyncStorage.setItem(DAILY_MISSION_STATE_KEY, JSON.stringify(currentMissionState));
+            }
+        }
+
+        // Se a missão foi acabada de completar AGORA, dá a recompensa
+        if (missionJustCompleted) {
+            let userCoinsStr = await AsyncStorage.getItem(USER_COINS_KEY);
+            let currentCoins = userCoinsStr ? parseInt(userCoinsStr, 10) : 0;
+            currentCoins += DAILY_MISSION_REWARD_COINS;
+            await AsyncStorage.setItem(USER_COINS_KEY, currentCoins.toString());
+            // Mostra o alerta de recompensa
+            Alert.alert("Completed Daily Mission!", `Completed the daily mission and won ${DAILY_MISSION_REWARD_COINS} moedas!`, [
+                { text: "OK", onPress: () => setIsDailyMissionPopupVisible(true) } // Mostra o pop-up ao clicar OK
+            ]);
+            // Atualiza o estado de moedas no HomeScreen
+            setUserCoins(currentCoins);
+
+            // Marca a recompensa no unlockedAchievements para não a dar de novo
+            const dailyRewardKey = `daily_reward_${currentMissionState.currentMissionId}_${currentMissionState.lastCheckedDate}`;
+            let achievementsStr = await AsyncStorage.getItem(ACHIEVEMENTS_KEY);
+            let unlocked = achievementsStr ? JSON.parse(achievementsStr) : [];
+            if (!unlocked.includes(dailyRewardKey)) {
+                unlocked.push(dailyRewardKey);
+                await AsyncStorage.setItem(ACHIEVEMENTS_KEY, JSON.stringify(unlocked));
+            }
+        }
+
+        return currentMissionState;
+    }, []); // As dependências foram removidas para garantir que sempre pega os dados mais recentes
+
 
     const loadAndCalculateTreeStage = useCallback(async () => {
         // Set loading to true only if tree stage is not yet determined (first load)
@@ -211,7 +337,7 @@ const HomeScreen = () => {
 
             setCurrentTreeStage(newTreeStageToShow);
 
-            // --- Daily Coin Bonus Logic ---
+            // --- Daily Coin Bonus Logic (existing) ---
             const lastEvaluationDate = await AsyncStorage.getItem(LAST_PROGRESS_EVALUATION_DATE_KEY);
             const today = new Date().toISOString().slice(0, 10);
             if (!lastEvaluationDate || lastEvaluationDate < today) {
@@ -263,9 +389,36 @@ const HomeScreen = () => {
             }
             setTreeProgressPercentage(progressForBar);
 
+            // LOGICA DA MISSÃO DIÁRIA: Carrega e define o estado do pop-up
+            const storedAchievements = await AsyncStorage.getItem(ACHIEVEMENTS_KEY);
+            const currentUnlockedAchievements = storedAchievements != null ? JSON.parse(storedAchievements) : [];
+
+            const missionState = await getDailyMissionState(allReadings, currentUnlockedAchievements);
+            const foundMission = DAILY_MISSIONS.find(m => m.id === missionState.currentMissionId);
+
+            setCurrentDailyMissionDetails({
+                mission: foundMission || null,
+                isCompleted: missionState.isCompleted,
+            });
+
+            // Decide se o pop-up deve ser visível automaticamente
+            const dailyRewardKey = foundMission ? `daily_reward_${foundMission.id}_${missionState.lastCheckedDate}` : null;
+            const hasClaimedRewardToday = dailyRewardKey && currentUnlockedAchievements.includes(dailyRewardKey);
+
+            // Mostra o pop-up na primeira carga do dia OU se a missão foi completada e a recompensa não foi reclamada
+            // Só mostra o pop-up no 'primeiro' foco do dia, ou quando se conclui (Alert já cuida disso)
+            // A ideia é que se o utilizador já viu a missão hoje, não mostre de novo automaticamente,
+            // mas que ele possa abrir clicando no botão.
+            if (foundMission && missionState.lastCheckedDate === new Date().toISOString().split('T')[0] && !hasClaimedRewardToday) {
+                 // Se a missão não foi completada ou a recompensa ainda não foi dada
+                if (missionState.isCompleted || (missionState.lastCheckedDate === new Date().toISOString().split('T')[0] && !missionState.isCompleted)) {
+                    setIsDailyMissionPopupVisible(true);
+                }
+            }
+
         } catch (e) {
-            console.error("Failed to load glucose data for tree stage:", e);
-            Alert.alert("Error", "Could not update tree status. Check API connection and data format.");
+            console.error("Failed to load data for Home Screen:", e);
+            Alert.alert("Error", "Could not update app status. Check API connection and data format.");
             setCurrentTreeStage(1); // Fallback to stage 1 on error
             setTreeProgressPercentage(0);
             setUniqueOnTargetReadingsCount(0);
@@ -273,7 +426,7 @@ const HomeScreen = () => {
         } finally {
             setIsDataLoading(false);
         }
-    }, [fetchGlucoseReadings, currentTreeStage]); // Added currentTreeStage to dependencies
+    }, [fetchGlucoseReadings, getDailyMissionState, currentTreeStage]);
 
 
     // Animations logic remains the same
@@ -433,6 +586,22 @@ const HomeScreen = () => {
         <ScrollView contentContainerStyle={styles.scrollContent}>
             <View style={styles.container}>
                 <View style={styles.topRightButtonsContainer}>
+                    {/* BOTÃO DA MISSÃO DIÁRIA */}
+                    <TouchableOpacity
+                        style={styles.dailyMissionButton}
+                        onPress={() => setIsDailyMissionPopupVisible(true)} // Abre o pop-up ao clicar
+                    >
+                        <Ionicons
+                            name={currentDailyMissionDetails.isCompleted ? "checkmark-circle" : "sparkles"} // Ícone de check se completa, faíscas se pendente
+                            size={36} // Ajustado para 36 para consistência com outros botões
+                            color={currentDailyMissionDetails.isCompleted ? "#28a745" : "#FFD700"} // Cor: verde para completa, dourado para pendente
+                        />
+                        {/* Removido o texto para que seja apenas um ícone, como os outros botões */}
+                        {/* {currentDailyMissionDetails.isCompleted && (
+                            <Ionicons name="gift" size={20} color="gold" style={styles.rewardIcon} /> // Ícone de presente se completa
+                        )} */}
+                    </TouchableOpacity>
+
                     <TouchableOpacity style={styles.achievementsButton} onPress={handleGoToAchievements}>
                         <Ionicons name="trophy-outline" size={36} color="#FFD700" />
                     </TouchableOpacity>
@@ -521,6 +690,14 @@ const HomeScreen = () => {
                 </View>
 
             </View>
+            {/* O POP-UP DA MISSÃO DIÁRIA É RENDERIZADO FORA DA SCROLLVIEW MAS AINDA DENTRO DO COMPONENTE */}
+            <DailyMissionPopup
+                isVisible={isDailyMissionPopupVisible}
+                onClose={() => setIsDailyMissionPopupVisible(false)}
+                mission={currentDailyMissionDetails.mission}
+                isCompleted={currentDailyMissionDetails.isCompleted}
+                rewardCoins={DAILY_MISSION_REWARD_COINS}
+            />
         </ScrollView>
     );
 };
@@ -548,6 +725,22 @@ const styles = StyleSheet.create({
     },
     profileButton: {},
     achievementsButton: {},
+    // NOVO ESTILO PARA O BOTÃO DA MISSÃO DIÁRIA
+    dailyMissionButton: {
+        // Estilo similar aos outros botões, se existirem
+        // Você pode ajustar o tamanho e margens para encaixar bem
+        justifyContent: 'center',
+        alignItems: 'center',
+        // Se precisar de um fundo ou borda:
+        // backgroundColor: '#fff', 
+        // borderRadius: 18, // Metade do tamanho do ícone para um círculo
+        // padding: 5,
+        // shadowColor: '#000',
+        // shadowOffset: { width: 0, height: 1 },
+        // shadowOpacity: 0.2,
+        // shadowRadius: 1.41,
+        // elevation: 2,
+    },
     titleContainer: {
         flexDirection: 'row',
         alignItems: 'center',

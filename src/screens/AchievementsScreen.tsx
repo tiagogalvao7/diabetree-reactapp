@@ -1,6 +1,6 @@
 // src/screens/AchievementsScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, Platform, ImageSourcePropType } from 'react-native'; // Adicionado ImageSourcePropType
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -19,13 +19,12 @@ const ACHIEVEMENTS_KEY = '@unlocked_achievements';
 const TREE_MAX_STAGE_KEY = '@tree_max_stage';
 const USER_OWNED_TREES_KEY = '@user_owned_trees';
 
-// Interface for a Badge
+// Interface for a Badge - REMOVIDO lockedImage daqui
 interface Badge {
     id: string;
     name: string;
     description: string;
-    image: any; // Colored badge image
-    lockedImage: any; // Grayscale badge image when locked
+    image: ImageSourcePropType; // Usamos ImageSourcePropType para tipagem correta de require()
     rewardCoins: number; // Coin reward upon unlocking
     checkUnlock: (
         allReadings: GlucoseReading[],
@@ -82,6 +81,8 @@ const AchievementsScreen = () => {
             return false;
         }
 
+        // Os valores alvo deverão vir do perfil do utilizador, ou de um local centralizado.
+        // Por agora, mantemos os exemplos para que a lógica funcione.
         const targetMin = 70; // Example target min (adjust as needed)
         const targetMax = 180; // Example target max (adjust as needed)
 
@@ -136,122 +137,109 @@ const AchievementsScreen = () => {
     };
 
 
-    // Define all Badges
-    // Register Badges: First Reading, 100 Reading, 500 Reading, 1000 Reading
-    // Trees: Collect 1 tree, collect 3 trees
-    // Streak: 3 day streak, 14 days streak, 90 days streak.
+    // Define all Badges - REMOVIDO lockedImage de cada badge
     const allBadges: Badge[] = [
         {
             id: 'first_step',
             name: 'First Step',
             description: 'Record 1 glucose reading.',
-            image: require('../../assets/images/badges/badge_readings_1.png'),
-            lockedImage: require('../../assets/images/badges/badge_readings_1.png'),
+            image: require('../../assets/images/badges/badge_readings1.png'),
             rewardCoins: 5,
             checkUnlock: (allReadings) => allReadings.length >= 1,
         },
-        /*{
-        //    id: 'hundred_readings',
-        //    name: '100 Readings',
-        //    description: 'Record 100 glucose reading.',
-        //    image: require('../../assets/images/badges/badge_readings_100.png'),
-        //    lockedImage: require('../../assets/images/badges/badge_readings_100.png'),
-        //    rewardCoins: 10,
-        //    checkUnlock: (allReadings) => allReadings.length >= 100,
-        // },
-        //{
-        //    id: '5hundred_readings',
-        //    name: 'Readings Experient',
-        //    description: 'Record 500 glucose reading.',
-        //    image: require('../../assets/images/badges/badge_readings_500.png'),
-        //    lockedImage: require('../../assets/images/badges/badge_readings_500.png'),
-        //    rewardCoins: 50,
-        //    checkUnlock: (allReadings) => allReadings.length >= 500,
-        // },
-        //{
-        //    id: 'thousand_readings',
-        //    name: 'Readings Master',
-        //    description: 'Record 1000 glucose reading.',
-        //    image: require('../../assets/images/badges/badge_readings_1000.png'),
-        //    lockedImage: require('../../assets/images/badges/badge_readings_1000.png'),
-        //    rewardCoins: 100,
-        //    checkUnlock: (allReadings) => allReadings.length >= 1000,
-         },*/
+        {
+            id: 'hundred_readings',
+            name: '100 Readings',
+            description: 'Record 100 glucose reading.',
+            image: require('../../assets/images/badges/badge_readings100.png'),
+            rewardCoins: 10,
+            checkUnlock: (allReadings) => allReadings.length >= 100,
+        },
+        {
+            id: '5hundred_readings',
+            name: 'Readings Experient',
+            description: 'Record 500 glucose reading.',
+            image: require('../../assets/images/badges/badge_readings500.png'),
+            rewardCoins: 50,
+            checkUnlock: (allReadings) => allReadings.length >= 500,
+        },
+        {
+            id: 'thousand_readings',
+            name: 'Readings Master',
+            description: 'Record 1000 glucose reading.',
+            image: require('../../assets/images/badges/badge_readings1000.png'),
+            rewardCoins: 100,
+            checkUnlock: (allReadings) => allReadings.length >= 1000,
+        },
         {
             id: 'consistent_starter',
             name: 'Consistent Starter',
             description: 'Record readings for 3 consecutive days.',
-            image: require('../../assets/images/badges/badge_streak.png'),
-            lockedImage: require('../../assets/images/badges/badge_streak.png'),
+            image: require('../../assets/images/badges/badge_streak3.png'),
             rewardCoins: 5,
             checkUnlock: (allReadings) => checkConsecutiveNDays(allReadings, 3),
         },
-        /*
         {
             id: 'consistent_reading',
             name: 'Consistent Reader',
             description: 'Record readings for 14 consecutive days.',
-            image: require('../../assets/images/badges/badge_readings_14.png'),
-            lockedImage: require('../../assets/images/badges/badge_readings_14.png'),
+            image: require('../../assets/images/badges/badge_streak14.png'),
             rewardCoins: 15,
             checkUnlock: (allReadings) => checkConsecutiveNDays(allReadings, 14),
         },
-    
         {
-            id: 'consistent_reading',
+            id: 'experient_reading',
+            name: 'Experient Reader',
+            description: 'Record readings for 30 consecutive days.',
+            image: require('../../assets/images/badges/badge_streak30.png'),
+            rewardCoins: 15,
+            checkUnlock: (allReadings) => checkConsecutiveNDays(allReadings, 30),
+        },
+        {
+            id: 'master_reading',
             name: 'Master Reader',
             description: 'Record readings for 90 consecutive days.',
-            image: require('../../assets/images/badges/badge_readings_90.png'),
-            lockedImage: require('../../assets/images/badges/badge_readings_90.png'),
+            image: require('../../assets/images/badges/badge_streak90.png'),
             rewardCoins: 50,
             checkUnlock: (allReadings) => checkConsecutiveNDays(allReadings, 90),
         },
-        */
-        /*
         {
-            id: 'healthy_levels',
+            id: 'healthy_levels3',
             name: 'Healthy Levels',
             description: 'Record readings levels within the desired interval for 3 consecutive days.',
-            image: require('../../assets/images/badges/badge_streak_3.png'),
-            lockedImage: require('../../assets/images/badges/badge_streak_3.png'),
+            image: require('../../assets/images/badges/badge_healthy3.png'),
             rewardCoins: 20,
             checkUnlock: (allReadings) => checkHealthyLevelsStreak(allReadings, 3),
         },
         {
-            id: 'healthy_levels',
+            id: 'healthy_levels7',
             name: 'Healthy Levels Student',
             description: 'Record readings levels within the desired interval for 7 consecutive days.',
-            image: require('../../assets/images/badges/badge_streak_7.png'),
-            lockedImage: require('../../assets/images/badges/badge_streak_7.png'),
+            image: require('../../assets/images/badges/badge_healthy7.png'),
             rewardCoins: 50,
             checkUnlock: (allReadings) => checkHealthyLevelsStreak(allReadings, 7),
         },
         {
-            id: 'healthy_levels',
+            id: 'healthy_levels14',
             name: 'Healthy Levels Experient',
             description: 'Record readings levels within the desired interval for 14 consecutive days.',
-            image: require('../../assets/images/badges/badge_streak_14.png'),
-            lockedImage: require('../../assets/images/badges/badge_streak_14.png'),
+            image: require('../../assets/images/badges/badge_healthy14.png'),
             rewardCoins: 100,
             checkUnlock: (allReadings) => checkHealthyLevelsStreak(allReadings, 14),
         },
         {
-            id: 'healthy_levels',
+            id: 'healthy_levels30',
             name: 'Healthy Levels Master',
             description: 'Record readings levels within the desired interval for 30 consecutive days.',
-            image: require('../../assets/images/badges/badge_streak_130.png'),
-            lockedImage: require('../../assets/images/badges/badge_streak_30.png'),
+            image: require('../../assets/images/badges/badge_healthy30.png'),
             rewardCoins: 250,
             checkUnlock: (allReadings) => checkHealthyLevelsStreak(allReadings, 30),
         },
-
-        */
         {
             id: 'first_tree_bought',
             name: 'First Tree',
             description: 'Buy your first tree.',
-            image: require('../../assets/images/badges/badge_tree.png'),
-            lockedImage: require('../../assets/images/badges/badge_tree.png'),
+            image: require('../../assets/images/badges/badge_tree1.png'),
             rewardCoins: 100,
             checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length > 1 || (ownedTreeIds.length === 1 && ownedTreeIds[0] !== 'normal_tree'),
         },
@@ -259,10 +247,17 @@ const AchievementsScreen = () => {
             id: 'three_trees_bought',
             name: 'Three Trees',
             description: 'Buy three trees.',
-            image: require('../../assets/images/badges/badge_tree.png'),
-            lockedImage: require('../../assets/images/badges/badge_tree.png'),
+            image: require('../../assets/images/badges/badge_tree3.png'),
             rewardCoins: 300,
             checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length >= 3,
+        },
+        {
+            id: 'five_trees_bought',
+            name: 'Tree Collector',
+            description: 'Buy five trees.',
+            image: require('../../assets/images/badges/badge_tree5.png'),
+            rewardCoins: 300,
+            checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length >= 5, // Corrigido de 3 para 5
         }
     ];
 
@@ -283,16 +278,20 @@ const AchievementsScreen = () => {
             const maxTreeStage = storedMaxStage != null ? parseInt(storedMaxStage, 10) : 1;
 
             const ownedTreesJson = await AsyncStorage.getItem(USER_OWNED_TREES_KEY);
+            // Certifica-te de que 'normal_tree' é o ID do primeiro/default tree
             const ownedTreeIds: string[] = ownedTreesJson != null ? JSON.parse(ownedTreesJson) : ['normal_tree'];
+
 
             let updatedUnlockedAchievements = [...initialUnlocked];
             let newCoinsEarned = 0;
 
             for (const badge of allBadges) {
                 if (!updatedUnlockedAchievements.includes(badge.id)) {
+                    // Passa 'unlockedAchievements' para o checkUnlock se a lógica depender de outros badges desbloqueados
                     if (badge.checkUnlock(allReadings, maxTreeStage, ownedTreeIds, updatedUnlockedAchievements)) {
                         updatedUnlockedAchievements.push(badge.id);
                         newCoinsEarned += badge.rewardCoins;
+                        // Pode-se considerar mostrar um modal ou toast mais amigável do que Alert.alert para melhor UX
                         Alert.alert("Achievement Unlocked!", `"${badge.name}" unlocked! You earned ${badge.rewardCoins} coins.`);
                     }
                 }
@@ -313,7 +312,7 @@ const AchievementsScreen = () => {
             console.error("Failed to load or update achievements/coins:", e);
             Alert.alert("Error", "Could not load your achievements.");
         }
-    }, [allBadges]);
+    }, [allBadges]); // allBadges como dependência para useCallback
 
     useFocusEffect(
         useCallback(() => {
@@ -326,11 +325,12 @@ const AchievementsScreen = () => {
         const bUnlocked = unlockedAchievements.includes(b.id);
 
         if (aUnlocked && !bUnlocked) {
-            return -1;
+            return -1; // Desbloqueados primeiro
         }
         if (!aUnlocked && bUnlocked) {
-            return 1;
+            return 1; // Bloqueados depois
         }
+        // Se ambos estão desbloqueados ou bloqueados, mantém a ordem original (ou podes adicionar outro critério de ordenação)
         return 0;
     });
 
@@ -361,8 +361,8 @@ const AchievementsScreen = () => {
                     return (
                         <View key={badge.id} style={styles.badgeItem}>
                             <Image
-                                source={isUnlocked ? badge.image : badge.lockedImage}
-                                style={[styles.badgeImage, !isUnlocked && styles.lockedBadge]}
+                                source={badge.image} // AGORA SEMPRE USA A IMAGEM PRINCIPAL
+                                style={[styles.badgeImage, !isUnlocked && styles.lockedBadge]} // APLICA ESTILO CONDICIONALMENTE
                             />
                             <Text style={styles.badgeName}>{badge.name}</Text>
                             <Text style={styles.badgeDescription}>{badge.description}</Text>
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
         padding: 15,
         margin: 10,
         alignItems: 'center',
-        width: 150,
+        width: 150, // Fixed width for consistent layout
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -453,9 +453,10 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         marginBottom: 10,
     },
+    // ESTILO PARA BADGES BLOQUEADOS - AQUI ESTÁ A CHAVE!
     lockedBadge: {
-        tintColor: 'grey',
-        opacity: 0.6,
+        tintColor: 'grey', // Isso vai "pintar" a imagem de cinzento
+        opacity: 0.6,      // E torná-la ligeiramente transparente
     },
     badgeName: {
         fontSize: 16,
@@ -473,12 +474,12 @@ const styles = StyleSheet.create({
     badgeStatusUnlocked: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#28a745',
+        color: '#28a745', // Verde para desbloqueado
     },
     badgeStatusLocked: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#dc3545',
+        color: '#dc3545', // Vermelho para bloqueado
     },
     badgeReward: {
         fontSize: 12,

@@ -1,12 +1,62 @@
 {
   "glucoseReadings": [
-    { "id": "1", "value": 110, "timestamp": "2025-06-25T08:00:00Z" },
-    { "id": "2", "value": 130, "timestamp": "2025-06-25T12:00:00Z" },
-    { "id": "3", "value": 130, "timestamp": "2025-06-25T16:00:00Z" },
-    { "id": "4", "value": 130, "timestamp": "2025-06-25T16:10:00Z" },
-    { "id": "5", "value": 130, "timestamp": "2025-06-25T16:40:00Z" },
-    { "id": "6", "value": 130, "timestamp": "2025-06-25T16:50:00Z" },
-    { "id": "7", "value": 130, "timestamp": "2025-06-25T17:50:00Z" }
+    {
+      "id": "1",
+      "value": 110,
+      "timestamp": "2025-06-25T08:00:00Z"
+    },
+    {
+      "id": "2",
+      "value": 130,
+      "timestamp": "2025-06-25T12:00:00Z"
+    },
+    {
+      "id": "3",
+      "value": 130,
+      "timestamp": "2025-06-25T16:00:00Z"
+    },
+    {
+      "id": "4",
+      "value": 130,
+      "timestamp": "2025-06-25T16:10:00Z"
+    },
+    {
+      "id": "5",
+      "value": 130,
+      "timestamp": "2025-06-25T16:40:00Z"
+    },
+    {
+      "id": "6",
+      "value": 130,
+      "timestamp": "2025-06-25T16:50:00Z"
+    },
+    {
+      "id": "7",
+      "value": 130,
+      "timestamp": "2025-06-25T17:50:00Z"
+    },
+    {
+      "id": "8",
+      "value": 130,
+      "timestamp": "2025-06-25T18:19:00Z"
+    },
+    {
+      "id": "9",
+      "value": 130,
+      "timestamp": "2025-06-30T18:19:00Z"
+    },
+    {
+      "id": "1751303786920",
+      "value": 122,
+      "timestamp": "2025-06-30T17:16:26.920Z"
+    },
+    {
+      "id": "1751303832142",
+      "value": 134,
+      "timestamp": "2025-06-30T17:17:12.142Z",
+      "mealContext": "Before breakfast",
+      "notes": "Feel good"
+    }
   ],
   "otherData": []
 }

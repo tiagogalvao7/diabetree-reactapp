@@ -20,6 +20,8 @@ interface UserProfile {
   diabetesDiscoveryDate?: string;
   minGlucoseTarget?: string;
   maxGlucoseTarget?: string;
+  fastInsuline?: string; // Variável adicionada: Insulina rápida
+  slowInsuline?: string; // Variável adicionada: Insulina lenta
 }
 
 const DEFAULT_TARGET_MIN = 70;
@@ -33,6 +35,8 @@ const ProfileScreen = () => {
     email: 'guest@example.com',
     minGlucoseTarget: String(DEFAULT_TARGET_MIN),
     maxGlucoseTarget: String(DEFAULT_TARGET_MAX),
+    fastInsuline: undefined,
+    slowInsuline: undefined
   });
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState('');
@@ -41,6 +45,8 @@ const ProfileScreen = () => {
   const [tempDiscoveryDate, setTempDiscoveryDate] = useState<Date | undefined>(undefined);
   const [tempMinGlucoseTarget, setTempMinGlucoseTarget] = useState('');
   const [tempMaxGlucoseTarget, setTempMaxGlucoseTarget] = useState('');
+  const [tempFastInsuline, setTempFastInsuline] = useState('');
+  const [tempSlowInsuline, setTempSlowInsuline] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -59,12 +65,16 @@ const ProfileScreen = () => {
         setTempDiscoveryDate(parsedProfile.diabetesDiscoveryDate ? new Date(parsedProfile.diabetesDiscoveryDate) : undefined);
         setTempMinGlucoseTarget(parsedProfile.minGlucoseTarget || String(DEFAULT_TARGET_MIN));
         setTempMaxGlucoseTarget(parsedProfile.maxGlucoseTarget || String(DEFAULT_TARGET_MAX));
+        setTempFastInsuline(parsedProfile.fastInsuline || '');
+        setTempSlowInsuline(parsedProfile.slowInsuline || '');
       } else {
         const defaultProfile: UserProfile = {
           name: 'Guest User',
           email: 'guest@example.com',
           minGlucoseTarget: String(DEFAULT_TARGET_MIN),
           maxGlucoseTarget: String(DEFAULT_TARGET_MAX),
+          fastInsuline: undefined,
+          slowInsuline: undefined
         };
         setProfile(defaultProfile);
         setTempName(defaultProfile.name);
@@ -73,6 +83,8 @@ const ProfileScreen = () => {
         setTempDiscoveryDate(undefined);
         setTempMinGlucoseTarget(String(DEFAULT_TARGET_MIN));
         setTempMaxGlucoseTarget(String(DEFAULT_TARGET_MAX));
+        setTempFastInsuline('');
+        setTempSlowInsuline('');
         await AsyncStorage.setItem(USER_PROFILE_KEY, JSON.stringify(defaultProfile));
       }
     } catch (e) {
@@ -128,6 +140,17 @@ const ProfileScreen = () => {
       return;
     }
 
+    if (tempFastInsuline.trim() !== '' && isNaN(Number(tempFastInsuline))) {
+      Alert.alert("Invalid Input", "Please enter a valid number for Fast Insulin.");
+      setIsLoading(false);
+      return;
+    }
+    if (tempSlowInsuline.trim() !== '' && isNaN(Number(tempSlowInsuline))) {
+      Alert.alert("Invalid Input", "Please enter a valid number for Slow Insulin.");
+      setIsLoading(false);
+      return;
+    }
+
     const newProfile: UserProfile = {
       name: tempName,
       email: tempEmail,
@@ -135,6 +158,8 @@ const ProfileScreen = () => {
       diabetesDiscoveryDate: tempDiscoveryDate ? tempDiscoveryDate.toISOString().split('T')[0] : undefined,
       minGlucoseTarget: String(minTargetValue),
       maxGlucoseTarget: String(maxTargetValue),
+      fastInsuline: tempFastInsuline.trim() === '' ? undefined : tempFastInsuline.trim(),
+      slowInsuline: tempSlowInsuline.trim() === '' ? undefined : tempSlowInsuline.trim()
     };
 
     try {
@@ -157,6 +182,8 @@ const ProfileScreen = () => {
     setTempDiscoveryDate(profile.diabetesDiscoveryDate ? new Date(profile.diabetesDiscoveryDate) : undefined);
     setTempMinGlucoseTarget(profile.minGlucoseTarget || String(DEFAULT_TARGET_MIN));
     setTempMaxGlucoseTarget(profile.maxGlucoseTarget || String(DEFAULT_TARGET_MAX));
+    setTempFastInsuline(profile.fastInsuline || '');
+    setTempSlowInsuline(profile.slowInsuline || '');
     setIsEditing(false);
   };
 
@@ -344,6 +371,43 @@ const ProfileScreen = () => {
                 </View>
             </View>
 
+            {/* Nova Seção: Informação sobre Insulina */}
+            <View style={styles.sectionHeader}>
+                <Ionicons name="medical-outline" size={22} color="#007bff" />
+                <Text style={styles.sectionTitle}>Insulin Information</Text>
+            </View>
+            <View style={styles.sectionContent}>
+                <View style={styles.inputGroup}>
+                <Ionicons name="speedometer-outline" size={20} color="#666" style={styles.icon} />
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>Fast-Acting Insulin (units):</Text>
+                    <TextInput
+                    style={styles.input}
+                    value={tempFastInsuline}
+                    onChangeText={setTempFastInsuline}
+                    placeholder="e.g., 1 unit per 10g carb"
+                    placeholderTextColor="#888"
+                    keyboardType="numeric"
+                    />
+                </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                <Ionicons name="time-outline" size={20} color="#666" style={styles.icon} />
+                <View style={styles.inputWrapper}>
+                    <Text style={styles.label}>Slow-Acting Insulin (units/day):</Text>
+                    <TextInput
+                    style={styles.input}
+                    value={tempSlowInsuline}
+                    onChangeText={setTempSlowInsuline}
+                    placeholder="e.g., 20 units daily"
+                    placeholderTextColor="#888"
+                    keyboardType="numeric"
+                    />
+                </View>
+                </View>
+            </View>
+
             <View style={styles.editButtonGroup}>
               <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={saveProfile}>
                 <Text style={styles.buttonText}>Save</Text>
@@ -361,7 +425,7 @@ const ProfileScreen = () => {
                   <Ionicons name="pencil-outline" size={24} color="#007bff" />
               </TouchableOpacity>
 
-              <Text style={styles.subtitleInCard}>View and edit your personal information.</Text>
+              <Text style={styles.subtitleInCard}>View and edit your personal information</Text>
 
               {/* Personal Information Display */}
               <View style={styles.sectionHeader}>
@@ -390,7 +454,7 @@ const ProfileScreen = () => {
               </View>
             </View>
 
-            {/* NEW: Glucose Target Display Card */}
+            {/* Glucose Target Display Card */}
             <View style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Ionicons name="stats-chart-outline" size={22} color="#007bff" />
@@ -410,6 +474,24 @@ const ProfileScreen = () => {
                         <Text style={styles.detailText}>
                             Healthy Range: {profile.minGlucoseTarget || DEFAULT_TARGET_MIN} - {profile.maxGlucoseTarget || DEFAULT_TARGET_MAX} mg/dL
                         </Text>
+                    </View>
+                </View>
+            </View>
+
+            {/* Nova Seção de Visualização: Informação sobre Insulina */}
+            <View style={styles.card}>
+                <View style={styles.sectionHeader}>
+                    <Ionicons name="medical-outline" size={22} color="#007bff" />
+                    <Text style={styles.sectionTitle}>Insulin Information</Text>
+                </View>
+                <View style={styles.sectionContent}>
+                    <View style={styles.detailRow}>
+                        <Ionicons name="speedometer-outline" size={20} color="#007bff" style={styles.detailIcon} />
+                        <Text style={styles.detailText}>Fast-Acting Insulin: {profile.fastInsuline || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                        <Ionicons name="time-outline" size={20} color="#007bff" style={styles.detailIcon} />
+                        <Text style={styles.detailText}>Slow-Acting Insulin: {profile.slowInsuline || 'N/A'}</Text>
                     </View>
                 </View>
             </View>
