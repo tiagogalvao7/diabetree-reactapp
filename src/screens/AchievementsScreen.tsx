@@ -1,10 +1,10 @@
 // src/screens/AchievementsScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, Platform, ImageSourcePropType } from 'react-native'; // Adicionado ImageSourcePropType
+import { View, Text, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, Platform, ImageSourcePropType } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Para lidar com a área segura
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface GlucoseReading {
     id: string;
@@ -12,20 +12,24 @@ interface GlucoseReading {
     timestamp: string;
 }
 
-// AsyncStorage Keys
-const GLUCOSE_READINGS_KEY = '@glucose_readings';
+// AsyncStorage Keys (Mantidos para moedas, conquistas e árvores, se ainda estiverem lá)
+// Se estes também passarem para a API, precisarão de ser alterados da mesma forma que as leituras.
 const USER_COINS_KEY = '@user_coins';
 const ACHIEVEMENTS_KEY = '@unlocked_achievements';
 const TREE_MAX_STAGE_KEY = '@tree_max_stage';
 const USER_OWNED_TREES_KEY = '@user_owned_trees';
 
-// Interface for a Badge - REMOVIDO lockedImage daqui
+// URL da sua API JSON-server para leituras de glicose
+// IMPORTANTE: Ajuste esta URL se o seu JSON-server estiver a correr noutra porta ou IP.
+// Para Android Emulator, geralmente é 'http://10.0.2.2:3000'. Para iOS Simulator/Real Device, pode ser 'http://localhost:3000' ou o IP da sua máquina.
+const API_GLUCOSE_READINGS_URL = 'http://192.168.2.214:3000/glucoseReadings'; 
+
 interface Badge {
     id: string;
     name: string;
     description: string;
-    image: ImageSourcePropType; // Usamos ImageSourcePropType para tipagem correta de require()
-    rewardCoins: number; // Coin reward upon unlocking
+    image: ImageSourcePropType;
+    rewardCoins: number;
     checkUnlock: (
         allReadings: GlucoseReading[],
         maxTreeStage: number,
@@ -38,7 +42,7 @@ const AchievementsScreen = () => {
     const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
     const [userCoins, setUserCoins] = useState(0);
     const navigation = useNavigation();
-    const insets = useSafeAreaInsets(); // Hook para obter as insets da área segura
+    const insets = useSafeAreaInsets();
 
     // Helper function to check for N consecutive days of readings (Revised for robustness)
     const checkConsecutiveNDays = (allReadings: GlucoseReading[], N: number): boolean => {
@@ -46,7 +50,7 @@ const AchievementsScreen = () => {
             return false;
         }
 
-        const uniqueDates = Array.from(new Set(allReadings.map(r => new Date(r.timestamp).toISOString().split('T')[0]))).sort(); // Sort dates ascending (YYYY-MM-DD)
+        const uniqueDates = Array.from(new Set(allReadings.map(r => new Date(r.timestamp).toISOString().split('T')[0]))).sort();
 
         if (uniqueDates.length < N) {
             return false;
@@ -60,12 +64,12 @@ const AchievementsScreen = () => {
                 const currentDate = new Date(uniqueDates[i]);
                 const previousDate = new Date(uniqueDates[i - 1]);
                 const diffTime = Math.abs(currentDate.getTime() - previousDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Calculate difference in days
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                if (diffDays === 1) { // If current date is exactly one day after previous date
+                if (diffDays === 1) {
                     currentStreak++;
                 } else {
-                    currentStreak = 1; // Streak broken, start new streak from this day
+                    currentStreak = 1;
                 }
             }
             if (currentStreak >= N) {
@@ -81,12 +85,9 @@ const AchievementsScreen = () => {
             return false;
         }
 
-        // Os valores alvo deverão vir do perfil do utilizador, ou de um local centralizado.
-        // Por agora, mantemos os exemplos para que a lógica funcione.
-        const targetMin = 70; // Example target min (adjust as needed)
-        const targetMax = 180; // Example target max (adjust as needed)
+        const targetMin = 70;
+        const targetMax = 180;
 
-        // Group readings by date
         const readingsByDate: { [key: string]: GlucoseReading[] } = {};
         for (const reading of allReadings) {
             const date = new Date(reading.timestamp).toISOString().split('T')[0];
@@ -96,37 +97,36 @@ const AchievementsScreen = () => {
             readingsByDate[date].push(reading);
         }
 
-        const uniqueSortedDates = Object.keys(readingsByDate).sort(); // Sort dates ascending
+        const uniqueSortedDates = Object.keys(readingsByDate).sort();
 
         let consecutiveHealthyDays = 0;
-        let lastProcessedDate: Date | null = null; // Track the last date that was part of a healthy streak
+        let lastProcessedDate: Date | null = null;
 
         for (const dateStr of uniqueSortedDates) {
             const readingsForDay = readingsByDate[dateStr];
             const currentDate = new Date(dateStr);
 
-            // Check if there was at least one reading for this day AND all readings were within the target range
             const allReadingsInTarget = readingsForDay.length > 0 && readingsForDay.every(reading =>
                 reading.value >= targetMin && reading.value <= targetMax
             );
 
             if (allReadingsInTarget) {
                 if (lastProcessedDate === null) {
-                    consecutiveHealthyDays = 1; // Start of a new streak
+                    consecutiveHealthyDays = 1;
                 } else {
                     const diffTime = Math.abs(currentDate.getTime() - lastProcessedDate.getTime());
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                    if (diffDays === 1) { // If the current day is exactly one day after the last healthy day
+                    if (diffDays === 1) {
                         consecutiveHealthyDays++;
                     } else {
-                        consecutiveHealthyDays = 1; // Streak broken, start a new streak from this day
+                        consecutiveHealthyDays = 1;
                     }
                 }
-                lastProcessedDate = currentDate; // Update the last date that contributed to the streak
+                lastProcessedDate = currentDate;
             } else {
-                consecutiveHealthyDays = 0; // Streak broken if no readings or not all in target
-                lastProcessedDate = null; // Reset last processed date
+                consecutiveHealthyDays = 0;
+                lastProcessedDate = null;
             }
 
             if (consecutiveHealthyDays >= N) {
@@ -136,8 +136,6 @@ const AchievementsScreen = () => {
         return false;
     };
 
-
-    // Define all Badges - REMOVIDO lockedImage de cada badge
     const allBadges: Badge[] = [
         {
             id: 'first_step',
@@ -238,10 +236,14 @@ const AchievementsScreen = () => {
         {
             id: 'first_tree_bought',
             name: 'First Tree',
-            description: 'Buy your first tree.',
+            description: 'Buy your first tree (excluding the default one).', // Descrição ajustada
             image: require('../../assets/images/badges/badge_tree1.png'),
             rewardCoins: 100,
-            checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length > 1 || (ownedTreeIds.length === 1 && ownedTreeIds[0] !== 'normal_tree'),
+            checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => {
+                // Filtra para contar apenas árvores compradas, excluindo a 'normal_tree'
+                const actualBoughtTrees = ownedTreeIds.filter(id => id !== 'normal_tree');
+                return actualBoughtTrees.length >= 1;
+            },
         },
         {
             id: 'three_trees_bought',
@@ -257,12 +259,26 @@ const AchievementsScreen = () => {
             description: 'Buy five trees.',
             image: require('../../assets/images/badges/badge_tree5.png'),
             rewardCoins: 300,
-            checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length >= 5, // Corrigido de 3 para 5
+            checkUnlock: (allReadings, maxTreeStage, ownedTreeIds) => ownedTreeIds.length >= 5,
         }
     ];
 
     const loadAchievementsAndCoins = useCallback(async () => {
         try {
+            // --- CARREGAR LEITURAS DE GLICOSE DA API ---
+            const response = await fetch(API_GLUCOSE_READINGS_URL);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const allReadings: GlucoseReading[] = await response.json();
+            console.log("Número de leituras carregadas da API:", allReadings.length);
+            if (allReadings.length > 0) {
+                console.log("Primeira leitura da API:", allReadings[0]);
+            }
+            // --- FIM DO CARREGAMENTO DA API ---
+
+            // Carregar moedas, conquistas e informações da árvore do AsyncStorage
+            // (Assumindo que ainda estão a ser persistidos localmente. Se passarem para a API, adapte aqui também)
             const storedCoins = await AsyncStorage.getItem(USER_COINS_KEY);
             const currentCoins = storedCoins != null ? parseInt(storedCoins, 10) : 0;
             setUserCoins(currentCoins);
@@ -271,16 +287,12 @@ const AchievementsScreen = () => {
             const initialUnlocked = storedAchievements != null ? JSON.parse(storedAchievements) : [];
             setUnlockedAchievements(initialUnlocked);
 
-            const jsonReadings = await AsyncStorage.getItem(GLUCOSE_READINGS_KEY);
-            const allReadings: GlucoseReading[] = jsonReadings != null ? JSON.parse(jsonReadings) : [];
-
             const storedMaxStage = await AsyncStorage.getItem(TREE_MAX_STAGE_KEY);
             const maxTreeStage = storedMaxStage != null ? parseInt(storedMaxStage, 10) : 1;
 
             const ownedTreesJson = await AsyncStorage.getItem(USER_OWNED_TREES_KEY);
-            // Certifica-te de que 'normal_tree' é o ID do primeiro/default tree
+            // Certifica-se de que 'normal_tree' é o ID do primeiro/default tree
             const ownedTreeIds: string[] = ownedTreesJson != null ? JSON.parse(ownedTreesJson) : ['normal_tree'];
-
 
             let updatedUnlockedAchievements = [...initialUnlocked];
             let newCoinsEarned = 0;
@@ -291,7 +303,6 @@ const AchievementsScreen = () => {
                     if (badge.checkUnlock(allReadings, maxTreeStage, ownedTreeIds, updatedUnlockedAchievements)) {
                         updatedUnlockedAchievements.push(badge.id);
                         newCoinsEarned += badge.rewardCoins;
-                        // Pode-se considerar mostrar um modal ou toast mais amigável do que Alert.alert para melhor UX
                         Alert.alert("Achievement Unlocked!", `"${badge.name}" unlocked! You earned ${badge.rewardCoins} coins.`);
                     }
                 }
@@ -310,9 +321,10 @@ const AchievementsScreen = () => {
 
         } catch (e) {
             console.error("Failed to load or update achievements/coins:", e);
-            Alert.alert("Error", "Could not load your achievements.");
+            // Alerta mais informativo sobre o problema da API
+            Alert.alert("Error", "Could not load your achievements or glucose data. Please ensure your JSON-server is running and accessible.");
         }
-    }, [allBadges]); // allBadges como dependência para useCallback
+    }, []); // Removido 'allBadges' das dependências do useCallback, pois é uma constante externa.
 
     useFocusEffect(
         useCallback(() => {
@@ -330,22 +342,18 @@ const AchievementsScreen = () => {
         if (!aUnlocked && bUnlocked) {
             return 1; // Bloqueados depois
         }
-        // Se ambos estão desbloqueados ou bloqueados, mantém a ordem original (ou podes adicionar outro critério de ordenação)
-        return 0;
+        return 0; // Mantém a ordem original se ambos estiverem desbloqueados/bloqueados
     });
 
     return (
-        // Use SafeAreaView or adjust padding based on insets for better iOS/Android Notch handling
         <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + (Platform.OS === 'android' ? 20 : 0) }]}>
-            {/* Custom Back Button - Fixed at top-left */}
             <TouchableOpacity
                 onPress={() => navigation.goBack()}
-                style={[styles.backButton, { top: insets.top + (Platform.OS === 'android' ? 10 : 0) }]} // Adjust top based on safe area
+                style={[styles.backButton, { top: insets.top + (Platform.OS === 'android' ? 10 : 0) }]}
             >
                 <Ionicons name="arrow-back" size={30} color="#333" />
             </TouchableOpacity>
 
-            {/* Main Title/Trophy Section - This will now appear below the back button */}
             <View style={styles.mainTitleContainer}>
                 <Ionicons name="trophy" size={36} color="#FFD700" style={styles.headerIcon} />
                 <Text style={styles.title}>Your Achievements</Text>
@@ -361,8 +369,8 @@ const AchievementsScreen = () => {
                     return (
                         <View key={badge.id} style={styles.badgeItem}>
                             <Image
-                                source={badge.image} // AGORA SEMPRE USA A IMAGEM PRINCIPAL
-                                style={[styles.badgeImage, !isUnlocked && styles.lockedBadge]} // APLICA ESTILO CONDICIONALMENTE
+                                source={badge.image}
+                                style={[styles.badgeImage, !isUnlocked && styles.lockedBadge]}
                             />
                             <Text style={styles.badgeName}>{badge.name}</Text>
                             <Text style={styles.badgeDescription}>{badge.description}</Text>
@@ -386,21 +394,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         backgroundColor: '#E0F2F7',
-        // paddingTop will be set dynamically using insets
     },
     backButton: {
         position: 'absolute',
-        left: 20, // Keep it from the very edge
-        zIndex: 10, // Ensure it's above other elements
-        // top will be set dynamically using insets
+        left: 20,
+        zIndex: 10,
     },
     mainTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 20,
-        marginTop: 50, // Adjusted margin to provide space below the absolute back button
-        justifyContent: 'center', // Center the trophy and title
-        width: '100%', // Ensure it takes full width for centering
+        marginTop: 50,
+        justifyContent: 'center',
+        width: '100%',
     },
     headerIcon: {
         marginRight: 10,
@@ -440,7 +446,7 @@ const styles = StyleSheet.create({
         padding: 15,
         margin: 10,
         alignItems: 'center',
-        width: 150, // Fixed width for consistent layout
+        width: 150,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
@@ -453,10 +459,9 @@ const styles = StyleSheet.create({
         resizeMode: 'contain',
         marginBottom: 10,
     },
-    // ESTILO PARA BADGES BLOQUEADOS - AQUI ESTÁ A CHAVE!
     lockedBadge: {
-        tintColor: 'grey', // Isso vai "pintar" a imagem de cinzento
-        opacity: 0.6,      // E torná-la ligeiramente transparente
+        tintColor: 'grey',
+        opacity: 0.6,
     },
     badgeName: {
         fontSize: 16,
@@ -474,12 +479,12 @@ const styles = StyleSheet.create({
     badgeStatusUnlocked: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#28a745', // Verde para desbloqueado
+        color: '#28a745',
     },
     badgeStatusLocked: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#dc3545', // Vermelho para bloqueado
+        color: '#dc3545',
     },
     badgeReward: {
         fontSize: 12,

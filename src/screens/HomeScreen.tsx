@@ -16,18 +16,10 @@ import {
     DAILY_MISSIONS,
     DAILY_MISSION_STATE_KEY,
     DAILY_MISSION_REWARD_COINS,
-    GLUCOSE_READINGS_KEY, // Chave para as leituras de glicose (já deve ter esta)
-    USER_COINS_KEY,       // Chave para as moedas do utilizador (já deve ter esta)
-    ACHIEVEMENTS_KEY,     // Chave para marcar recompensas diárias já dadas (já deve ter esta)
-} from '../utils/missions'; // Onde definimos tudo sobre as missões diárias
-
-// Certifique-se que esta interface GlucoseReading é consistente com a de missions.ts, ou remova
-// a duplicada aqui e use apenas a de missions.ts
-// interface GlucoseReading {
-//     id: string;
-//     value: number;
-//     timestamp: string;
-// }
+    GLUCOSE_READINGS_KEY, 
+    USER_COINS_KEY,       
+    ACHIEVEMENTS_KEY,     
+} from '../utils/missions';
 
 interface TreeItem {
     id: string;

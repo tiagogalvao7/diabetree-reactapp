@@ -56,6 +56,18 @@
       "timestamp": "2025-06-30T17:17:12.142Z",
       "mealContext": "Before breakfast",
       "notes": "Feel good"
+    },
+    {
+      "id": "1751303786922",
+      "value": 122,
+      "timestamp": "2025-07-01T09:16:26.920Z"
+    },
+    {
+      "id": "1751360733680",
+      "value": 125,
+      "timestamp": "2025-07-01T09:05:33.680Z",
+      "mealContext": "After Breakfast",
+      "notes": "Feel good"
     }
   ],
   "otherData": []
