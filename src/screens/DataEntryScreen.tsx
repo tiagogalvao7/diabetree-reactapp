@@ -1,16 +1,16 @@
-// src/screens/DataEntryScreen.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, Alert, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native'; // Added ActivityIndicator
+import { View, Text, StyleSheet, TextInput, Alert, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { sha256 } from 'js-sha256';
 
 // Import GlucoseReading interface and keys from utils/missions for consistency
 import { GlucoseReading, USER_COINS_KEY, GLUCOSE_READINGS_KEY, ACHIEVEMENTS_KEY } from '../utils/missions';
 
 const LAST_COIN_EARN_TIMESTAMP_KEY = '@last_coin_earn_timestamp';
-const API_BASE_URL = 'http://192.168.2.214:3000'; // Make sure this is your correct IP
+const API_BASE_URL = 'http://192.168.2.214:3001'; // Make sure this is your correct IP
 
 // Target definitions for glucose levels
 const TARGET_MIN = 70;
@@ -19,10 +19,9 @@ const TARGET_MAX = 180;
 const DataEntryScreen = () => {
   const [glucoseValue, setGlucoseValue] = useState('');
   const [recentReadings, setRecentReadings] = useState<GlucoseReading[]>([]);
-  const [loading, setLoading] = useState(false); // New loading state
-  const [apiError, setApiError] = useState(''); // New API error state
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
 
-  // New states for context fields
   const [mealContext, setMealContext] = useState('');
   const [activityContext, setActivityContext] = useState('');
   const [notes, setNotes] = useState('');
@@ -32,7 +31,6 @@ const DataEntryScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadReadings();
-      // Clear context fields when screen gains focus, assuming new entry
       setMealContext('');
       setActivityContext('');
       setNotes('');
@@ -40,8 +38,8 @@ const DataEntryScreen = () => {
   );
 
   const loadReadings = async () => {
-    setLoading(true); // Set loading to true when fetching
-    setApiError(''); // Clear previous errors
+    setLoading(true);
+    setApiError('');
     try {
       const response = await fetch(`${API_BASE_URL}/glucoseReadings`);
       if (!response.ok) {
@@ -53,7 +51,9 @@ const DataEntryScreen = () => {
       }
       const data: GlucoseReading[] = await response.json();
 
-      // Sort from most recent to oldest
+      // ADICIONA ESTA LINHA PARA TESTAR - Podes remover depois
+      console.log('Dados carregados com hashes:', data.filter(r => r.dataHash).map(r => r.dataHash));
+
       data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentReadings(data);
 
@@ -62,7 +62,7 @@ const DataEntryScreen = () => {
       setApiError("Error: Could not load past readings from API. Ensure json-server is running.");
       setRecentReadings([]);
     } finally {
-      setLoading(false); // Set loading to false after fetch attempt
+      setLoading(false);
     }
   };
 
@@ -86,18 +86,38 @@ const DataEntryScreen = () => {
   };
 
   const confirmSaveReading = async (value: number) => {
-    const newReading: GlucoseReading = {
-      id: Date.now().toString(),
+    const id = Date.now().toString();
+    const timestamp = new Date().toISOString();
+
+    const newReadingWithoutHash = {
+      id: id,
       value: value,
-      timestamp: new Date().toISOString(),
-      // Add new context fields to the reading object
-      mealContext: mealContext || undefined, // Use undefined if empty to not send null string
+      timestamp: timestamp,
+      mealContext: mealContext || undefined,
       activityContext: activityContext || undefined,
       notes: notes || undefined,
     };
 
-    setLoading(true); // Show loading when saving
-    setApiError(''); // Clear errors
+    // Gera o hash a partir do objeto sem o id para garantir que é sempre consistente
+    const dataToHash = {
+      value: newReadingWithoutHash.value,
+      timestamp: newReadingWithoutHash.timestamp,
+      mealContext: newReadingWithoutHash.mealContext,
+      activityContext: newReadingWithoutHash.activityContext,
+      notes: newReadingWithoutHash.notes,
+    };
+
+    const dataString = JSON.stringify(dataToHash);
+    const calculatedHash = sha256(dataString);
+
+    // Cria o objeto final com o hash
+    const newReading: GlucoseReading = {
+      ...newReadingWithoutHash,
+      dataHash: calculatedHash,
+    };
+
+    setLoading(true);
+    setApiError('');
     try {
       const response = await fetch(`${API_BASE_URL}/glucoseReadings`, {
         method: 'POST',
@@ -114,14 +134,13 @@ const DataEntryScreen = () => {
         return;
       }
 
-      setGlucoseValue(''); // Clear the input
-      setMealContext(''); // Clear context fields after saving
+      setGlucoseValue('');
+      setMealContext('');
       setActivityContext('');
       setNotes('');
 
       let alertMessage = "Reading recorded!";
 
-      // --- Logic for Earning Coins with Time Rule ---
       if (newReading.value >= TARGET_MIN && newReading.value <= TARGET_MAX) {
         const storedLastCoinTimestamp = await AsyncStorage.getItem(LAST_COIN_EARN_TIMESTAMP_KEY);
         const lastCoinTimestamp = storedLastCoinTimestamp ? parseInt(storedLastCoinTimestamp, 10) : 0;
@@ -131,7 +150,7 @@ const DataEntryScreen = () => {
         if (currentTime - lastCoinTimestamp >= TEN_MINUTES_IN_MS) {
           const storedCoins = await AsyncStorage.getItem(USER_COINS_KEY);
           let currentCoins = storedCoins != null ? parseInt(storedCoins, 10) : 0;
-          currentCoins += 1; // Add 1 coin
+          currentCoins += 1;
           await AsyncStorage.setItem(USER_COINS_KEY, currentCoins.toString());
           await AsyncStorage.setItem(LAST_COIN_EARN_TIMESTAMP_KEY, currentTime.toString());
           alertMessage = 'Reading recorded! You win 1 coin for an on-target reading! 💰';
@@ -150,8 +169,8 @@ const DataEntryScreen = () => {
       Alert.alert("Success", alertMessage, [
         {
           text: "OK", onPress: () => {
-            loadReadings(); // Reload readings from API
-            navigation.goBack(); // Go back to the previous screen (HomeScreen)
+            loadReadings();
+            navigation.goBack();
           }
         }
       ]);
@@ -160,7 +179,7 @@ const DataEntryScreen = () => {
       console.error("Failed to save reading or add coins:", e);
       Alert.alert("Error", "Could not record the reading.");
     } finally {
-      setLoading(false); // Hide loading after save attempt
+      setLoading(false);
     }
   };
 
@@ -173,8 +192,8 @@ const DataEntryScreen = () => {
         {
           text: "Delete",
           onPress: async () => {
-            setLoading(true); // Show loading when deleting
-            setApiError(''); // Clear errors
+            setLoading(true);
+            setApiError('');
             try {
               const response = await fetch(`${API_BASE_URL}/glucoseReadings/${idToDelete}`, {
                 method: 'DELETE',
@@ -194,7 +213,7 @@ const DataEntryScreen = () => {
               console.error("Failed to delete reading:", e);
               Alert.alert("Error", "Could not delete the reading.");
             } finally {
-              setLoading(false); // Hide loading after delete attempt
+              setLoading(false);
             }
           },
           style: "destructive"
@@ -215,8 +234,8 @@ const DataEntryScreen = () => {
         {
           text: "Delete All Data",
           onPress: async () => {
-            setLoading(true); // Show loading when clearing all
-            setApiError(''); // Clear errors
+            setLoading(true);
+            setApiError('');
             try {
               const allReadingsResponse = await fetch(`${API_BASE_URL}/glucoseReadings`);
               if (!allReadingsResponse.ok) {
@@ -231,7 +250,6 @@ const DataEntryScreen = () => {
 
               await AsyncStorage.setItem(USER_COINS_KEY, '0');
               await AsyncStorage.removeItem(LAST_COIN_EARN_TIMESTAMP_KEY);
-              // Also clear achievements or daily mission state if you want a full reset
               await AsyncStorage.removeItem(ACHIEVEMENTS_KEY);
 
               setGlucoseValue('');
@@ -242,7 +260,7 @@ const DataEntryScreen = () => {
               console.error("Failed to delete all readings:", e);
               Alert.alert("Error", "Could not delete all readings.");
             } finally {
-              setLoading(false); // Hide loading after clear all attempt
+              setLoading(false);
             }
           },
           style: "destructive"
@@ -261,17 +279,40 @@ const DataEntryScreen = () => {
     }
   };
 
-  // Helper to format date/time
   const formatDateTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const options: Intl.DateTimeFormatOptions = {
       year: 'numeric',
-      month: 'short', // e.g., 'Jul'
+      month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     };
     return date.toLocaleString('en-US', options);
+  };
+
+  const verifyHash = (reading: GlucoseReading) => {
+    if (!reading.dataHash) {
+      Alert.alert('Verificação impossível', 'Este registo não tem um hash.');
+      return;
+    }
+    
+    const dataToHash = {
+      value: reading.value,
+      timestamp: reading.timestamp,
+      mealContext: reading.mealContext,
+      activityContext: reading.activityContext,
+      notes: reading.notes,
+    };
+    
+    const dataString = JSON.stringify(dataToHash);
+    const calculatedHash = sha256(dataString);
+    
+    if (calculatedHash === reading.dataHash) {
+      Alert.alert('Integridade Verificada', 'O registo não foi alterado. 💚');
+    } else {
+      Alert.alert('ALERTA DE SEGURANÇA', 'O registo pode ter sido alterado! 💔');
+    }
   };
 
   return (
@@ -285,14 +326,12 @@ const DataEntryScreen = () => {
           keyboardType="numeric"
           value={glucoseValue}
           onChangeText={(text) => {
-            // Optional: Live feedback on value range as typed
             setGlucoseValue(text);
           }}
           returnKeyType="done"
           onSubmitEditing={saveReading}
         />
 
-        {/* Dynamic Range Indicator (simplified example) */}
         {glucoseValue && !isNaN(parseFloat(glucoseValue)) && (
           <View style={styles.rangeIndicatorContainer}>
             <Text style={[styles.rangeIndicatorText, getReadingStyle(parseFloat(glucoseValue))]}>
@@ -302,7 +341,6 @@ const DataEntryScreen = () => {
           </View>
         )}
 
-        {/* --- NEW: Context Input Fields --- */}
         <Text style={styles.sectionTitle}>Add Context (Optional)</Text>
         <TextInput
           style={styles.input}
@@ -323,9 +361,8 @@ const DataEntryScreen = () => {
           onChangeText={setNotes}
           multiline={true}
           numberOfLines={3}
-          textAlignVertical="top" // Ensure text starts from top for multiline
+          textAlignVertical="top"
         />
-        {/* --- End NEW --- */}
 
         <TouchableOpacity style={styles.saveButton} onPress={saveReading} disabled={loading}>
           {loading ? (
@@ -348,20 +385,28 @@ const DataEntryScreen = () => {
             {recentReadings.length === 0 ? (
               <Text style={styles.noReadingsText}>No readings yet. Enter some data!</Text>
             ) : (
-              recentReadings.slice(0, 5).map((reading) => ( // Display last 5 readings
+              recentReadings.slice(0, 5).map((reading) => (
                 <View key={reading.id} style={[styles.readingItem, getReadingStyle(reading.value)]}>
                   <View style={styles.readingInfo}>
                     <Text style={styles.readingText}>
                       {formatDateTime(reading.timestamp)}:
                       <Text style={styles.readingValueText}> {reading.value} mg/dL</Text>
                     </Text>
-                    {/* Display context if available */}
                     {(reading.mealContext || reading.activityContext || reading.notes) && (
                       <Text style={styles.readingContext}>
                         {reading.mealContext ? `🍽️ ${reading.mealContext}` : ''}
                         {reading.activityContext ? ` 🏃‍♂️ ${reading.activityContext}` : ''}
                         {reading.notes ? ` 📝 ${reading.notes}` : ''}
                       </Text>
+                    )}
+                    {reading.dataHash && (
+                      <>
+                        <Text style={styles.readingHashText}>Hash: {reading.dataHash.substring(0, 20)}...</Text>
+                        <TouchableOpacity style={styles.verifyButton} onPress={() => verifyHash(reading)}>
+                          <Ionicons name="shield-checkmark-outline" size={16} color="#fff" />
+                          <Text style={styles.verifyButtonText}>Verificar</Text>
+                        </TouchableOpacity>
+                      </>
                     )}
                   </View>
                   <TouchableOpacity onPress={() => deleteReading(reading.id)} style={styles.deleteButton}>
@@ -372,7 +417,6 @@ const DataEntryScreen = () => {
             )}
           </>
         )}
-
 
         {recentReadings.length > 0 && (
           <View style={styles.clearButtonContainer}>
@@ -420,24 +464,24 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     paddingHorizontal: 15,
-    marginBottom: 15, // Reduced marginBottom for new fields
+    marginBottom: 15,
     fontSize: 18,
     backgroundColor: '#f8f8f8',
     color: '#333',
   },
-  inputMultiline: { // New style for multiline input
+  inputMultiline: {
     height: 80,
     borderColor: '#a0d8e6',
     borderWidth: 2,
     borderRadius: 10,
     width: '100%',
     paddingHorizontal: 15,
-    paddingVertical: 10, // Added vertical padding
+    paddingVertical: 10,
     marginBottom: 20,
     fontSize: 16,
     backgroundColor: '#f8f8f8',
     color: '#333',
-    textAlignVertical: 'top', // For Android multiline text alignment
+    textAlignVertical: 'top',
   },
   saveButton: {
     flexDirection: 'row',
@@ -462,7 +506,7 @@ const styles = StyleSheet.create({
     marginTop: 30,
     marginBottom: 15,
     color: '#555',
-    alignSelf: 'flex-start', // Align left with other content
+    alignSelf: 'flex-start',
     width: '100%',
   },
   noReadingsText: {
@@ -483,9 +527,9 @@ const styles = StyleSheet.create({
     borderLeftWidth: 5,
     backgroundColor: '#f0faff',
   },
-  readingInfo: { // New container for text info to allow context on new line
+  readingInfo: {
     flex: 1,
-    paddingRight: 10, // Spacing from delete button
+    paddingRight: 10,
   },
   readingText: {
     fontSize: 16,
@@ -494,7 +538,7 @@ const styles = StyleSheet.create({
   readingValueText: {
     fontWeight: 'bold',
   },
-  readingContext: { // Style for new context text
+  readingContext: {
     fontSize: 13,
     color: '#888',
     marginTop: 2,
@@ -532,23 +576,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 10,
   },
-  errorText: { // Style for API error messages
+  errorText: {
     color: '#dc3545',
     marginTop: 15,
     fontSize: 16,
     textAlign: 'center',
     paddingHorizontal: 10,
   },
-  sectionTitle: { // Style for new section titles like "Add Context"
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 10, // Adjust spacing
+    marginTop: 10,
     marginBottom: 5,
     color: '#555',
     alignSelf: 'flex-start',
     width: '100%',
   },
-  rangeIndicatorContainer: { // Style for dynamic range indicator
+  rangeIndicatorContainer: {
     marginBottom: 15,
     width: '100%',
     alignItems: 'center',
@@ -559,8 +603,29 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 5,
-    overflow: 'hidden', // Ensures border-radius works
-    backgroundColor: '#eee', // Default background
+    overflow: 'hidden',
+    backgroundColor: '#eee',
+  },
+  readingHashText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  verifyButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 5,
+    fontWeight: 'bold',
   },
 });
 

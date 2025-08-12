@@ -57,7 +57,7 @@ const CUMULATIVE_STAGE_REQUIREMENTS: { [key: number]: number } = {
 };
 
 const MAX_GENERIC_TREE_STAGE = 4;
-const API_BASE_URL = 'http://192.168.2.214:3000'; // Make sure this is your correct IP
+const API_BASE_URL = 'http://192.168.2.214:3001'; // Make sure this is your correct IP
 const MIN_TIME_BETWEEN_READINGS_FOR_PROGRESS = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 const calculateTreeMetrics = (allReadings: GlucoseReading[]): { uniqueOnTargetReadingsCount: number; recentUniqueReadingsCount: number; } => {

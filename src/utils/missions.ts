@@ -11,6 +11,7 @@ export interface GlucoseReading {
     mealContext?: string;    // Novo: Contexto da refeição (opcional)
     activityContext?: string; // Novo: Contexto da atividade (opcional)
     notes?: string;          // Novo: Notas adicionais (opcional)
+    dataHash?: string;
 }
   
   // --- Interface for the Daily Mission ---

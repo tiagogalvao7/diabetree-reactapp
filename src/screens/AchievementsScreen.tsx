@@ -22,7 +22,7 @@ const USER_OWNED_TREES_KEY = '@user_owned_trees';
 // URL da sua API JSON-server para leituras de glicose
 // IMPORTANTE: Ajuste esta URL se o seu JSON-server estiver a correr noutra porta ou IP.
 // Para Android Emulator, geralmente é 'http://10.0.2.2:3000'. Para iOS Simulator/Real Device, pode ser 'http://localhost:3000' ou o IP da sua máquina.
-const API_GLUCOSE_READINGS_URL = 'http://192.168.2.214:3000/glucoseReadings'; 
+const API_GLUCOSE_READINGS_URL = 'http://192.168.2.214:3001/glucoseReadings'; 
 
 interface Badge {
     id: string;
