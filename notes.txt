@@ -1,0 +1,26 @@
+->Futuramente: o plano é colocar os dados do paciente na blockchain.
+             : para já as imagens estão quietas (pngs), mas o objetivo é colocar árvores "vivas".
+->O sonho era conseguir ligar a aplicação à app do FreeStyle Libre e recolher dados em tempo real em vez de inserir os valores manualmente.
+->Ter uma árvore default.
+->Ter uma árvore que fica mais bonita ou não, consoante a média dos valores.
+->Ter uma shop com várias árvores: Comprar árvores com moedas que se vão ganhando consoante os valores no tempo alvo.
+->Quando adicionamos uma leitura de glicemia, ter um input para adicionar uma nota.
+->Filtrar leituras por data: 7,14,30 dias.
+
+TO DO:
+->Badges: Registos: Primeiro Registo, 100 Registos, 500 registos, 1000 registos.
+          Streak: Record 3 dias consecutivos, 14 dias, 90 dias.
+          Trees: Collect 1 árvore, 3 árvores, 5 árvores
+          Healthy Levels: 3 dias consecutivos, 7 dias, 14 dias, 30 dias
+          último Badge de todos os tipos tem que ser diferente, e chamar QQ coisa master
+
+->Arranjar 3 badges diferentes: um para trees, um para readings, e outro para tempo no intervalo.
+->Melhorar Data Entry screen. Filtrar por 7 dias, 14 dias e 30 dias.
+
+->Push no Github
+
+->git add .
+->git commit -m "<some text>"
+->git push
+
+-> api: json-server --watch db.json --port 3000
