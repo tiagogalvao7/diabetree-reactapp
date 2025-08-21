@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+<<<<<<< HEAD
 
 // Import API_BASE_URL from .env
 import { API_BASE_URL } from '@env';
@@ -15,6 +16,15 @@ import { API_BASE_URL } from '@env';
 import { GlucoseReading, USER_COINS_KEY, GLUCOSE_READINGS_KEY, ACHIEVEMENTS_KEY } from '../utils/missions';
 
 const LAST_COIN_EARN_TIMESTAMP_KEY = '@last_coin_earn_timestamp';
+=======
+import { sha256 } from 'js-sha256';
+
+// Import GlucoseReading interface and keys from utils/missions for consistency
+import { GlucoseReading, USER_COINS_KEY, GLUCOSE_READINGS_KEY, ACHIEVEMENTS_KEY } from '../utils/missions';
+
+const LAST_COIN_EARN_TIMESTAMP_KEY = '@last_coin_earn_timestamp';
+const API_BASE_URL = 'http://192.168.2.214:3001'; // Make sure this is your correct IP
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
 // Target definitions for glucose levels
 const TARGET_MIN = 70;
@@ -55,7 +65,12 @@ const DataEntryScreen = () => {
       }
       const data: GlucoseReading[] = await response.json();
 
+<<<<<<< HEAD
       // Removed console.log for data hashes as blockchain functionality is being removed.
+=======
+      // ADICIONA ESTA LINHA PARA TESTAR - Podes remover depois
+      console.log('Dados carregados com hashes:', data.filter(r => r.dataHash).map(r => r.dataHash));
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
       data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentReadings(data);
@@ -92,7 +107,11 @@ const DataEntryScreen = () => {
     const id = Date.now().toString();
     const timestamp = new Date().toISOString();
 
+<<<<<<< HEAD
     const newReading: GlucoseReading = { // No dataHash property here
+=======
+    const newReadingWithoutHash = {
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
       id: id,
       value: value,
       timestamp: timestamp,
@@ -101,7 +120,27 @@ const DataEntryScreen = () => {
       notes: notes || undefined,
     };
 
+<<<<<<< HEAD
     // Removed all Blockchain-related hashing logic here (sha256 import and usage)
+=======
+    // Gera o hash a partir do objeto sem o id para garantir que é sempre consistente
+    const dataToHash = {
+      value: newReadingWithoutHash.value,
+      timestamp: newReadingWithoutHash.timestamp,
+      mealContext: newReadingWithoutHash.mealContext,
+      activityContext: newReadingWithoutHash.activityContext,
+      notes: newReadingWithoutHash.notes,
+    };
+
+    const dataString = JSON.stringify(dataToHash);
+    const calculatedHash = sha256(dataString);
+
+    // Cria o objeto final com o hash
+    const newReading: GlucoseReading = {
+      ...newReadingWithoutHash,
+      dataHash: calculatedHash,
+    };
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
     setLoading(true);
     setApiError('');
@@ -278,7 +317,33 @@ const DataEntryScreen = () => {
     return date.toLocaleString('en-US', options);
   };
 
+<<<<<<< HEAD
   // Removed verifyHash function as it's part of Blockchain functionality.
+=======
+  const verifyHash = (reading: GlucoseReading) => {
+    if (!reading.dataHash) {
+      Alert.alert('Verificação impossível', 'Este registo não tem um hash.');
+      return;
+    }
+    
+    const dataToHash = {
+      value: reading.value,
+      timestamp: reading.timestamp,
+      mealContext: reading.mealContext,
+      activityContext: reading.activityContext,
+      notes: reading.notes,
+    };
+    
+    const dataString = JSON.stringify(dataToHash);
+    const calculatedHash = sha256(dataString);
+    
+    if (calculatedHash === reading.dataHash) {
+      Alert.alert('Integridade Verificada', 'O registo não foi alterado. 💚');
+    } else {
+      Alert.alert('ALERTA DE SEGURANÇA', 'O registo pode ter sido alterado! 💔');
+    }
+  };
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
   return (
     <ScrollView contentContainerStyle={styles.scrollViewContent}>
@@ -364,7 +429,19 @@ const DataEntryScreen = () => {
                         {reading.notes ? ` 📝 ${reading.notes}` : ''}
                       </Text>
                     )}
+<<<<<<< HEAD
                     {/* Removed dataHash display and verify button */}
+=======
+                    {reading.dataHash && (
+                      <>
+                        <Text style={styles.readingHashText}>Hash: {reading.dataHash.substring(0, 20)}...</Text>
+                        <TouchableOpacity style={styles.verifyButton} onPress={() => verifyHash(reading)}>
+                          <Ionicons name="shield-checkmark-outline" size={16} color="#fff" />
+                          <Text style={styles.verifyButtonText}>Verificar</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
                   </View>
                   <TouchableOpacity onPress={() => deleteReading(reading.id)} style={styles.deleteButton}>
                     <Ionicons name="trash-outline" size={20} color="#666" />
@@ -563,9 +640,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#eee',
   },
+<<<<<<< HEAD
   // Removed readingHashText style as hash display is removed
   // Removed verifyButton style as verify button is removed
   // Removed verifyButtonText style as verify button is removed
 });
 
 export default DataEntryScreen;
+=======
+  readingHashText: {
+    fontSize: 12,
+    color: '#6c757d',
+    marginTop: 5,
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  verifyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007bff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  verifyButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 5,
+    fontWeight: 'bold',
+  },
+});
+
+export default DataEntryScreen;
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4

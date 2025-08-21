@@ -8,9 +8,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AppStackParamList, MainTabParamList } from '../navigation/AppNavigator';
 
+<<<<<<< HEAD
 // Import API_BASE_URL from .env
 import { API_BASE_URL } from '@env';
 
+=======
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 // IMPORTAÇÕES DA MISSÃO DIÁRIA
 import DailyMissionPopup from '../components/DailyMissionPopup'; // O componente do pop-up
 import {
@@ -60,6 +63,10 @@ const CUMULATIVE_STAGE_REQUIREMENTS: { [key: number]: number } = {
 };
 
 const MAX_GENERIC_TREE_STAGE = 4;
+<<<<<<< HEAD
+=======
+const API_BASE_URL = 'http://192.168.2.214:3001'; // Make sure this is your correct IP
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 const MIN_TIME_BETWEEN_READINGS_FOR_PROGRESS = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 const calculateTreeMetrics = (allReadings: GlucoseReading[]): { uniqueOnTargetReadingsCount: number; recentUniqueReadingsCount: number; } => {

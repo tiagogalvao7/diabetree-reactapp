@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// src/screens/CollectionScreen.tsx
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Alert, ActivityIndicator, Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5,6 +9,7 @@ import { useFocusEffect, useNavigation, NavigationProp } from '@react-navigation
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
+<<<<<<< HEAD
 // Import API_BASE_URL from .env (assuming it's used elsewhere, though not directly in this file's API calls)
 import { API_BASE_URL } from '@env'; // Retained for consistency, even if not directly used for fetch here.
 
@@ -23,6 +28,24 @@ const FLAT_LIST_PADDING_HORIZONTAL = 15;
 const calculatedCardWidth = (width - (FLAT_LIST_PADDING_HORIZONTAL * 2) - (cardMargin * numColumns * 2)) / numColumns;
 
 // Declare styles AFTER 'calculatedCardWidth' has been determined
+=======
+// --- CONSTANTES AND STYLE CALCULATION (MOVED TO TOP AND REORDERED) ---
+const { width } = Dimensions.get('window');
+const cardMargin = 8; // Margem entre os cards
+const numColumns = 2;
+
+// Define os KEYS do AsyncStorage no topo
+const USER_OWNED_TREES_KEY = '@user_owned_trees';
+const EQUIPPED_TREE_KEY = '@equipped_tree_id';
+
+// Calcula a largura de cada card ANTES da definição dos estilos
+// Usa valores fixos de padding horizontal aqui, pois 'styles.flatListContent' ainda não existe
+const FLAT_LIST_PADDING_HORIZONTAL = 15; 
+const calculatedCardWidth = (width - (FLAT_LIST_PADDING_HORIZONTAL * 2) - (cardMargin * numColumns * 2)) / numColumns;
+
+
+// Declara os estilos APÓS o 'calculatedCardWidth' ter sido determinado
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 const styles = StyleSheet.create({
     loadingContainer: {
         flex: 1,
@@ -37,11 +60,19 @@ const styles = StyleSheet.create({
     },
     headerContainer: {
         width: '100%',
+<<<<<<< HEAD
         paddingHorizontal: FLAT_LIST_PADDING_HORIZONTAL, // Using the constant here
         alignItems: 'center',
         paddingTop: 20,
         backgroundColor: '#E0F2F7',
         paddingBottom: 15, // Space between subtitle and start of FlatList
+=======
+        paddingHorizontal: FLAT_LIST_PADDING_HORIZONTAL, // Usando a constante aqui
+        alignItems: 'center',
+        paddingTop: 20,
+        backgroundColor: '#E0F2F7',
+        paddingBottom: 15, // Espaço entre o subtítulo e o início da FlatList
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     },
     title: {
         fontSize: 28,
@@ -56,21 +87,35 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     flatListContent: {
+<<<<<<< HEAD
         paddingHorizontal: FLAT_LIST_PADDING_HORIZONTAL, // Using the constant here
+=======
+        paddingHorizontal: FLAT_LIST_PADDING_HORIZONTAL, // Usando a constante aqui
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         paddingBottom: 20,
         backgroundColor: '#E0F2F7',
     },
     row: {
         flex: 1,
+<<<<<<< HEAD
         justifyContent: 'space-between', // Distribute items evenly in the row
         marginBottom: cardMargin * 2, // Spacing between rows of cards
+=======
+        justifyContent: 'space-between', // Distribui os itens uniformemente na linha
+        marginBottom: cardMargin * 2, // Espaçamento entre as linhas de cards
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     },
     treeItemCard: {
         backgroundColor: '#fff',
         borderRadius: 12,
         padding: 15,
+<<<<<<< HEAD
         marginHorizontal: cardMargin, // Horizontal margin between cards
         width: calculatedCardWidth, // *** ATTENTION: WIDTH IS NOW DEFINED HERE! ***
+=======
+        marginHorizontal: cardMargin, // Margem horizontal entre cards
+        width: calculatedCardWidth, // *** ATENÇÃO: AGORA O WIDTH É DEFINIDO AQUI! ***
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         aspectRatio: 0.8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -171,6 +216,10 @@ const styles = StyleSheet.create({
 
 // --- END CONSTANTS AND STYLES DECLARATIONS ---
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 type RootStackParamList = {
     Home: undefined;
     DataEntry: undefined;
@@ -186,7 +235,11 @@ interface TreeItem {
     price?: number;
 }
 
+<<<<<<< HEAD
 // Your complete list of trees - we already know the images work here
+=======
+// Sua lista completa de árvores - já sabemos que as imagens funcionam aqui
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 const ALL_COLLECTABLE_TREES: TreeItem[] = [
     {
         id: 'normal_tree',
@@ -243,7 +296,11 @@ const CollectionScreen = () => {
     const loadCollectionData = useCallback(async () => {
         setIsLoading(true);
         try {
+<<<<<<< HEAD
             console.log("--- STARTING COLLECTION LOAD ---"); // Translated comment
+=======
+            console.log("--- INÍCIO DO CARREGAMENTO DA COLEÇÃO ---");
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
             const ownedTreesJson = await AsyncStorage.getItem(USER_OWNED_TREES_KEY);
             let ownedTreeIds: string[] = ownedTreesJson != null ? JSON.parse(ownedTreesJson) : [];
@@ -256,16 +313,25 @@ const CollectionScreen = () => {
             const validOwnedTreeIds = Array.from(uniqueOwnedTreeIds).filter(id => getTreeById(id) !== undefined);
             
             if (JSON.stringify(validOwnedTreeIds) !== JSON.stringify(ownedTreeIds)) {
+<<<<<<< HEAD
                 await AsyncStorage.setItem(USER_OWNED_TREES_KEY, JSON.stringify(validOwnedTreeIds));
                 console.log("DEBUG: ownedTreeIds updated in AsyncStorage:", validOwnedTreeIds); // Translated comment
             }
             setOwnedTreeIdsState(validOwnedTreeIds);
             console.log("DEBUG: ownedTreeIdsState set to (component):", validOwnedTreeIds); // Translated comment
+=======
+                 await AsyncStorage.setItem(USER_OWNED_TREES_KEY, JSON.stringify(validOwnedTreeIds));
+                 console.log("DEBUG: ownedTreeIds atualizado no AsyncStorage:", validOwnedTreeIds);
+            }
+            setOwnedTreeIdsState(validOwnedTreeIds);
+            console.log("DEBUG: ownedTreeIdsState definido para (componente):", validOwnedTreeIds);
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
             const storedEquippedTree = await AsyncStorage.getItem(EQUIPPED_TREE_KEY);
             
             if (storedEquippedTree && validOwnedTreeIds.includes(storedEquippedTree) && getTreeById(storedEquippedTree)) {
                 setEquippedTreeId(storedEquippedTree); 
+<<<<<<< HEAD
                 console.log("DEBUG: equippedTreeId set to:", storedEquippedTree); // Translated comment
             } else {
                 await AsyncStorage.setItem(EQUIPPED_TREE_KEY, 'normal_tree');
@@ -277,6 +343,19 @@ const CollectionScreen = () => {
         } catch (e) {
             console.error("ERROR: Failed to load collection trees:", e); // Translated comment
             Alert.alert("Error", "Could not load your tree collection."); // Translated alert
+=======
+                console.log("DEBUG: equippedTreeId definido para:", storedEquippedTree);
+            } else {
+                await AsyncStorage.setItem(EQUIPPED_TREE_KEY, 'normal_tree');
+                setEquippedTreeId('normal_tree');
+                console.log("DEBUG: equippedTreeId fallback para 'normal_tree'.");
+            }
+            console.log("--- FIM DO CARREGAMENTO DA COLEÇÃO ---");
+
+        } catch (e) {
+            console.error("ERRO: Falha ao carregar árvores da coleção:", e);
+            Alert.alert("Erro", "Não foi possível carregar a sua coleção de árvores.");
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         } finally {
             setIsLoading(false);
         }
@@ -406,7 +485,12 @@ const CollectionScreen = () => {
     orderedTrees.push(...unownedTrees);
     // --- End Data Preparation ---
 
+<<<<<<< HEAD
     // The ListHeaderComponent now contains only the screen title and subtitle
+=======
+
+    // O ListHeaderComponent agora contém apenas o título e o subtítulo da tela
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     const ListHeader = () => (
         <View style={styles.headerContainer}>
             <Text style={styles.title}>Your Tree Collection</Text>
@@ -416,15 +500,27 @@ const CollectionScreen = () => {
 
     return (
         <FlatList
+<<<<<<< HEAD
             data={orderedTrees} // Now uses the ordered list!
+=======
+            data={orderedTrees} // Agora usa a lista ordenada!
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
             renderItem={renderTreeItem}
             keyExtractor={(item) => item.id}
             numColumns={numColumns}
             columnWrapperStyle={styles.row}
             contentContainerStyle={styles.flatListContent} 
+<<<<<<< HEAD
             ListHeaderComponent={ListHeader} // The screen header
+=======
+            ListHeaderComponent={ListHeader} // O cabeçalho da tela
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         />
     );
 };
 
+<<<<<<< HEAD
 export default CollectionScreen;
+=======
+export default CollectionScreen;
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4

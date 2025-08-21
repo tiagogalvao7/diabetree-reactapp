@@ -1,0 +1,59 @@
+{
+  "glucoseReadings": [
+    {
+      "id": "1755031032571",
+      "value": 115,
+      "timestamp": "2025-08-12T20:37:12.571Z",
+      "mealContext": "After dinner",
+      "activityContext": "Meat with rice",
+      "notes": "Feeling good",
+      "dataHash": "894a41127ce62cdb46acd401d41fe60fdb0b7c0959e63a84efd5ae48678f7f96"
+    },
+    {
+      "id": "1755031963370",
+      "value": 119,
+      "timestamp": "2025-08-12T20:52:43.370Z",
+      "mealContext": "coffee break",
+      "activityContext": "tired",
+      "notes": "Bad day",
+      "dataHash": "2fb56fd2f0a4f0f690e2a96735168edcc93317fa7dd216458ad5d3b356ce312c"
+    },
+    {
+      "id": "1755032477507",
+      "value": 140,
+      "timestamp": "2025-08-12T21:01:17.507Z",
+      "mealContext": "After lunch",
+      "activityContext": "After job",
+      "notes": "Bad day",
+      "dataHash": "700eadb8a1e928028f470ef6733da521c09f1665633d20e17340abfbe5c924be"
+    },
+    {
+      "id": "1755032664092",
+      "value": 176,
+      "timestamp": "2025-08-12T21:04:24.092Z",
+      "mealContext": "After running",
+      "activityContext": "30min run",
+      "notes": "Good day",
+      "dataHash": "1fd0f210d7a6e07bb620cbc8b060844528ed2f60a3a578ece21614fb52152a25"
+    },
+    {
+      "id": "1755032927681",
+      "value": 156,
+      "timestamp": "2025-08-12T21:08:47.681Z",
+      "mealContext": "nothing",
+      "activityContext": "nothing",
+      "notes": "nothing",
+      "dataHash": "247b70a3a7272b603161cc47a12da947c7fa0d2d3de8bab0797cc4bacaaca866"
+    },
+    {
+      "id": "1755033130170",
+      "value": 154,
+      "timestamp": "2025-08-12T21:12:10.170Z",
+      "mealContext": "lunch",
+      "activityContext": "lunch tuna",
+      "notes": "With friends",
+      "dataHash": "a174effe0a1544c2cc9bacfbcdf6f0d55c8d14f83bbe2b707c03b89332c1b751"
+    }
+  ],
+  "otherData": []
+}

@@ -7,7 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import DataEntryScreen from '../screens/DataEntryScreen';
 import ShopScreen from '../screens/ShopScreen';
+<<<<<<< HEAD
 import CollectionScreen from '../screens/CollectionScreen';
+=======
+import CollectionScreen from '../screens/CollectionScreen'; // Ensure this is imported
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
 const Tab = createBottomTabNavigator();
 

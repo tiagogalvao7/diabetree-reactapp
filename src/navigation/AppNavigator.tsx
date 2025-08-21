@@ -33,7 +33,11 @@ const AppNavigator = ({ initialRouteName }: { initialRouteName: keyof AppStackPa
         name="Profile"
         component={ProfileScreen}
         options={{
+<<<<<<< HEAD
           headerShown: false,
+=======
+          headerShown: false, // <-- This is the key change!
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         }}
       />
       <AppStack.Screen

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+// src/screens/ProfileScreen.tsx
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Button, TextInput, Alert, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect, NavigationProp } from '@react-navigation/native';
@@ -19,8 +23,13 @@ interface UserProfile {
   diabetesDiscoveryDate?: string;
   minGlucoseTarget?: string;
   maxGlucoseTarget?: string;
+<<<<<<< HEAD
   fastInsuline?: string; // Added variable: Fast-acting insulin
   slowInsuline?: string; // Added variable: Slow-acting insulin
+=======
+  fastInsuline?: string; // Variável adicionada: Insulina rápida
+  slowInsuline?: string; // Variável adicionada: Insulina lenta
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 }
 
 const DEFAULT_TARGET_MIN = 70;
@@ -139,6 +148,20 @@ const ProfileScreen = () => {
       return;
     }
 
+<<<<<<< HEAD
+=======
+    if (tempFastInsuline.trim() !== '' && isNaN(Number(tempFastInsuline))) {
+      Alert.alert("Invalid Input", "Please enter a valid number for Fast Insulin.");
+      setIsLoading(false);
+      return;
+    }
+    if (tempSlowInsuline.trim() !== '' && isNaN(Number(tempSlowInsuline))) {
+      Alert.alert("Invalid Input", "Please enter a valid number for Slow Insulin.");
+      setIsLoading(false);
+      return;
+    }
+
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     const newProfile: UserProfile = {
       name: tempName,
       email: tempEmail,
@@ -359,7 +382,11 @@ const ProfileScreen = () => {
                 </View>
             </View>
 
+<<<<<<< HEAD
             {/* Insulin Information Section */}
+=======
+            {/* Nova Seção: Informação sobre Insulina */}
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
             <View style={styles.sectionHeader}>
                 <Ionicons name="medical-outline" size={22} color="#007bff" />
                 <Text style={styles.sectionTitle}>Insulin Information</Text>
@@ -368,14 +395,22 @@ const ProfileScreen = () => {
                 <View style={styles.inputGroup}>
                 <Ionicons name="speedometer-outline" size={20} color="#666" style={styles.icon} />
                 <View style={styles.inputWrapper}>
+<<<<<<< HEAD
                     <Text style={styles.label}>Fast-Acting Insulin (details):</Text>
+=======
+                    <Text style={styles.label}>Fast-Acting Insulin (units):</Text>
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
                     <TextInput
                     style={styles.input}
                     value={tempFastInsuline}
                     onChangeText={setTempFastInsuline}
                     placeholder="e.g., 1 unit per 10g carb"
                     placeholderTextColor="#888"
+<<<<<<< HEAD
                     // keyboardType removed to allow string input
+=======
+                    keyboardType="numeric"
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
                     />
                 </View>
                 </View>
@@ -383,20 +418,31 @@ const ProfileScreen = () => {
                 <View style={styles.inputGroup}>
                 <Ionicons name="time-outline" size={20} color="#666" style={styles.icon} />
                 <View style={styles.inputWrapper}>
+<<<<<<< HEAD
                     <Text style={styles.label}>Slow-Acting Insulin (details/day):</Text>
+=======
+                    <Text style={styles.label}>Slow-Acting Insulin (units/day):</Text>
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
                     <TextInput
                     style={styles.input}
                     value={tempSlowInsuline}
                     onChangeText={setTempSlowInsuline}
                     placeholder="e.g., 20 units daily"
                     placeholderTextColor="#888"
+<<<<<<< HEAD
                     // keyboardType removed to allow string input
+=======
+                    keyboardType="numeric"
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
                     />
                 </View>
                 </View>
             </View>
 
+<<<<<<< HEAD
             {/* Action Buttons (inside edit card) */}
+=======
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
             <View style={styles.editButtonGroup}>
               <TouchableOpacity style={[styles.actionButton, styles.saveButton]} onPress={saveProfile}>
                 <Text style={styles.buttonText}>Save</Text>
@@ -467,7 +513,11 @@ const ProfileScreen = () => {
                 </View>
             </View>
 
+<<<<<<< HEAD
             {/* New Display Section: Insulin Information */}
+=======
+            {/* Nova Seção de Visualização: Informação sobre Insulina */}
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
             <View style={styles.card}>
                 <View style={styles.sectionHeader}>
                     <Ionicons name="medical-outline" size={22} color="#007bff" />
@@ -700,4 +750,8 @@ const styles = StyleSheet.create({
   },
 });
 
+<<<<<<< HEAD
 export default ProfileScreen;
+=======
+export default ProfileScreen;
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4

@@ -12,7 +12,11 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
+<<<<<<< HEAD
     "@react-native-community/datetimepicker": "8.4.1",
+=======
+    "@react-native-community/datetimepicker": "8.3.0",
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     "@react-navigation/bottom-tabs": "^7.3.15",
     "@react-navigation/native": "^7.1.10",
     "@react-navigation/native-stack": "^7.3.16",
@@ -23,9 +27,15 @@
     "expo-status-bar": "~2.2.3",
     "js-sha256": "^0.11.1",
     "react": "19.0.0",
+<<<<<<< HEAD
     "react-native": "0.79.5",
     "react-native-progress": "^5.0.1",
     "react-native-safe-area-context": "5.4.0",
+=======
+    "react-native": "0.79.3",
+    "react-native-progress": "^5.0.1",
+    "react-native-safe-area-context": "^5.4.0",
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "simple-crypto-js": "^3.0.1"
@@ -35,7 +45,10 @@
     "@react-native-community/cli": "^20.0.0",
     "@types/react": "~19.0.10",
     "json-server": "^0.17.3",
+<<<<<<< HEAD
     "react-native-dotenv": "^3.4.11",
+=======
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     "typescript": "~5.8.3"
   },
   "private": true

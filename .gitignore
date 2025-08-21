@@ -2,7 +2,10 @@
 
 # dependencies
 node_modules/
+<<<<<<< HEAD
 package-lock.json
+=======
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
 # Expo
 .expo/
@@ -26,13 +29,17 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+<<<<<<< HEAD
 *.log
+=======
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 
 # macOS
 .DS_Store
 *.pem
 
 # local env files
+<<<<<<< HEAD
 .env
 .env*.local
 
@@ -44,5 +51,9 @@ db.json
 .idea/
 Thumbs.db
 
+=======
+.env*.local
+
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 # typescript
 *.tsbuildinfo

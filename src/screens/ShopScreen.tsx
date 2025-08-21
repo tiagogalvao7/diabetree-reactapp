@@ -1,10 +1,18 @@
+<<<<<<< HEAD
+=======
+// src/screens/ShopScreen.tsx
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Alert, ActivityIndicator, Dimensions } from 'react-native'; // Import FlatList and Dimensions
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
+<<<<<<< HEAD
 // --- ASYNCSTORAGE KEYS ---
+=======
+// --- KEYS PARA ASYNCSTORAGE ---
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 const USER_COINS_KEY = '@user_coins';
 const USER_OWNED_TREES_KEY = '@user_owned_trees';
 
@@ -16,9 +24,15 @@ interface ShopItem {
     image: any;
 }
 
+<<<<<<< HEAD
 // --- ALL SHOP ITEMS DATA ---
 const ALL_SHOP_ITEMS: ShopItem[] = [
     { id: 'oak', name: 'Oak Tree Seed', price: 100, image: require('../../assets/images/trees/oak_tree_stage5.png') },
+=======
+// --- DADOS DE TODOS OS ITENS DA LOJA ---
+const ALL_SHOP_ITEMS: ShopItem[] = [
+    { id: 'oak', name: 'Oak Tree Seed', price: 100, image: require('../../assets/images/trees/oak_tree_stage5.png') }, // Ajustando preço para teste
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
     { id: 'willow', name: 'Willow Tree Seed', price: 150, image: require('../../assets/images/trees/willow_tree_stage5.png') },
     { id: 'pine', name: 'Pine Tree Seed', price: 150, image: require('../../assets/images/trees/pine_tree_stage5.png') },
     { id: 'cherry', name: 'Cherry Tree Seed', price: 200, image: require('../../assets/images/trees/cherry_tree_stage5.png') },
@@ -27,6 +41,7 @@ const ALL_SHOP_ITEMS: ShopItem[] = [
 
 // --- CONSTANTS AND STYLE CALCULATION ---
 const { width } = Dimensions.get('window');
+<<<<<<< HEAD
 const cardMargin = 8; // Margin between cards
 const numColumns = 2; // Number of columns
 
@@ -34,6 +49,15 @@ const numColumns = 2; // Number of columns
 const FLAT_LIST_PADDING_HORIZONTAL = 15; 
 
 // Calculate the width of each card
+=======
+const cardMargin = 8; // Margem entre os cards
+const numColumns = 2; // Número de colunas
+
+// Padding horizontal que envolve os cards na FlatList
+const FLAT_LIST_PADDING_HORIZONTAL = 15; 
+
+// Calcula a largura de cada card
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
 const calculatedCardWidth = (width - (FLAT_LIST_PADDING_HORIZONTAL * 2) - (cardMargin * numColumns * 2)) / numColumns;
 
 
@@ -250,7 +274,11 @@ const styles = StyleSheet.create({
         backgroundColor: 'white',
         borderRadius: 12, // Slightly larger border-radius for consistency
         padding: 15,
+<<<<<<< HEAD
         marginHorizontal: cardMargin, // Horizontal margin between cards
+=======
+        marginHorizontal: cardMargin, // Margem horizontal entre cards
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
         width: calculatedCardWidth, // Apply calculated width
         aspectRatio: 0.8, // Maintain aspect ratio for cards
         alignItems: 'center',
@@ -313,4 +341,8 @@ const styles = StyleSheet.create({
     },
 });
 
+<<<<<<< HEAD
 export default ShopScreen;
+=======
+export default ShopScreen;
+>>>>>>> e31865ac6ee283c8fdd812f88b02059f1c2c18b4
