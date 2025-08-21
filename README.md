@@ -10,20 +10,20 @@ Welcome to **Diabetree**, a friendly mobile app designed to help you manage your
 Tracking glucose levels can feel like a chore, so we added a **gamified twist**: nurturing your very own virtual tree!  
 The more consistently you log your readings and stay within range, the more your tree will flourish. Think of it as a little green buddy cheering you on.
 
-![Home Screen](<!(assets/images/screens/homescreen.png)>)
+![Home Screen]([<!(assets/images/screens/homescreen.png)>](https://github.com/tiagogalvao7/diabetree-reactapp/blob/main/assets/images/screens/home.png))
 
 ---
 
 ## ✨ Features
 
 - **Easy Glucose Tracking** – Quickly log your blood glucose levels.
-  ![Glicemia Screen](<!(assets/images/screens/insertglicemiascreen.png)>)
+  ![Glicemia Screen]([<!(assets/images/screens/insertglicemiascreen.png)>](https://github.com/tiagogalvao7/diabetree-reactapp/blob/main/assets/images/screens/glicemia.png))
 - **Contextual Notes** – Add details about meals, activities, or other influences.
 - **Interactive Tree Growth** – Watch your virtual tree grow as you stay consistent.
 - **Achievements & Rewards** – Unlock badges and earn coins for milestones.
-  ![Achievements Screen](<!(assets/images/screens/achievementsscreen.png)>)
+  ![Achievements Screen]([<!(assets/images/screens/achievementsscreen.png)>](https://github.com/tiagogalvao7/diabetree-reactapp/blob/main/assets/images/screens/achievementsscreen.png))
 - **Diabetree Shop** – Spend coins on new tree seeds to expand your collection.
-  ![Shop Screen](<!(assets/images/screens/shopscreen.png)>)
+  ![Shop Screen]([<!(assets/images/screens/shopscreen.png)>](https://github.com/tiagogalvao7/diabetree-reactapp/blob/main/assets/images/screens/shopscreen.png))
 - **Personal Profile** – Store insulin info and set personal glucose targets.
 - **Local Data Storage** – All data is stored locally via JSON-server for privacy.
 
