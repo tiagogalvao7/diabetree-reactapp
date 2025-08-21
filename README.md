@@ -10,20 +10,20 @@ Welcome to **Diabetree**, a friendly mobile app designed to help you manage your
 Tracking glucose levels can feel like a chore, so we added a **gamified twist**: nurturing your very own virtual tree!  
 The more consistently you log your readings and stay within range, the more your tree will flourish. Think of it as a little green buddy cheering you on.
 
-![Home Screen](<!(assets/images/screens/homescreen.png)>)
+<img src="docs/images/homescreen.png" alt="Diabetree App Home Screen with Tree" width="50%"/>
 
 ---
 
 ## ✨ Features
 
-- **Easy Glucose Tracking** – Quickly log your blood glucose levels.
-  ![Glicemia Screen](<!(assets/images/screens/insertglicemiascreen.png)>)
+- **Easy Glicemia Tracking** – Quickly log your blood glucose levels.
+    <img src="docs/images/insertglicemiascreen.png" alt="Glicemia Screen" width="50%"/>
 - **Contextual Notes** – Add details about meals, activities, or other influences.
 - **Interactive Tree Growth** – Watch your virtual tree grow as you stay consistent.
 - **Achievements & Rewards** – Unlock badges and earn coins for milestones.
-  ![Achievements Screen](<!(assets/images/screens/achievementsscreen.png)>)
+    <img src="docs/images/achievementsscreen.png" alt="Achievements Screen" width="50%"/>
 - **Diabetree Shop** – Spend coins on new tree seeds to expand your collection.
-  ![Shop Screen](<!(assets/images/screens/shopscreen.png)>)
+    <img src="docs/images/shopscreen.png" alt="Shop Screen" width="50%"/>
 - **Personal Profile** – Store insulin info and set personal glucose targets.
 - **Local Data Storage** – All data is stored locally via JSON-server for privacy.
 
