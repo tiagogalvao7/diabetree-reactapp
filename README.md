@@ -10,7 +10,7 @@ Welcome to **Diabetree**, a friendly mobile app designed to help you manage your
 Tracking glucose levels can feel like a chore, so we added a **gamified twist**: nurturing your very own virtual tree!  
 The more consistently you log your readings and stay within range, the more your tree will flourish. Think of it as a little green buddy cheering you on.
 
-![Home Screen](!(assets/images/screens/homescreen.png))
+![Home Screen](assets/images/screens/homescreen.png)
 
 ---
 
